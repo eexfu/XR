@@ -6,6 +6,11 @@ import {
   PlaneGeometry,
 } from 'three';
 
+/**
+ * 注意：此文件与Three.js v0.176.0兼容
+ * 所有几何体都已经是BufferGeometry，无需特殊修改
+ */
+
 export default (parent, config) => {
   const group = new Group();
 

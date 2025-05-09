@@ -1,4 +1,4 @@
-import {FontLoader, Group} from 'three';
+import {FontLoader, Group, Vector2} from 'three';
 import ScoreDisplay from './score-display';
 import Countdown from './countdown';
 import Message from './message';

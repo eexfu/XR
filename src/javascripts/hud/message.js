@@ -1,10 +1,16 @@
 import wrap from 'wordwrap';
 import values from 'object.values';
 import {
-  Group, MeshBasicMaterial, TextGeometry, Mesh,
+  Group, MeshBasicMaterial, Mesh,
 } from 'three';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import $ from 'zepto-modules';
 import Button from './button';
+
+/**
+ * 注意: 在Three.js v0.176.0中，TextGeometry已从核心移动到附加组件中
+ * 需要确保项目中正确导入了three/addons路径
+ */
 
 const CHAR_LIMIT = 16;
 const FONT_SIZE = 0.07;

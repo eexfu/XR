@@ -1,127 +1,107 @@
 /**
- * @author dmarcos / https://github.com/dmarcos
- * @author mrdoob / http://mrdoob.com
+ * XR Controller implementation compatible with Three.js v0.176.0
+ * Based on XRControllerModelFactory
  */
 
-import {Matrix4} from 'three';
+import {
+  Quaternion,
+  Vector3,
+  Group
+} from 'three';
 
-const VRControls = function(object, onError) {
-  const scope = this;
-
-  let vrDisplay; let
-    vrDisplays;
-
-  const standingMatrix = new Matrix4();
-
-  let frameData = null;
-
-  if ('VRFrameData' in window) {
-    frameData = new VRFrameData();
+class XRControls {
+  constructor(camera, renderer) {
+    this.camera = camera;
+    this.renderer = renderer;
+    this.xrSession = null;
+    this.controllers = [];
+    this.scale = 1;
+    this.standing = false;
+    this.userHeight = 1.6;
+    
+    this.controllerGroup = new Group();
+    this.camera.add(this.controllerGroup);
   }
 
-  function gotVRDisplays(displays) {
-    vrDisplays = displays;
-
-    if (displays.length > 0) {
-      vrDisplay = displays[0];
-    } else if (onError) onError('VR input not available.');
+  async connect() {
+    if (!navigator.xr) {
+      console.warn('WebXR not supported in this browser');
+      return false;
+    }
+    
+    try {
+      const supported = await navigator.xr.isSessionSupported('immersive-vr');
+      if (!supported) {
+        console.warn('immersive-vr session not supported');
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('Error checking XR support:', err);
+      return false;
+    }
   }
 
-  if (navigator.getVRDisplays) {
-    navigator.getVRDisplays().then(gotVRDisplays).catch(() => {
-      console.warn('THREE.VRControls: Unable to get VR Displays');
+  async startXR() {
+    if (!navigator.xr) return;
+    
+    try {
+      this.xrSession = await navigator.xr.requestSession('immersive-vr', {
+        optionalFeatures: ['local-floor', 'bounded-floor']
+      });
+      
+      await this.renderer.xr.setSession(this.xrSession);
+      this.setupControllers();
+      
+      return true;
+    } catch (err) {
+      console.error('Error starting XR session:', err);
+      return false;
+    }
+  }
+
+  setupControllers() {
+    // Setup controller input sources
+    this.xrSession.addEventListener('inputsourceschange', this.onInputSourcesChange.bind(this));
+  }
+
+  onInputSourcesChange(event) {
+    // Handle new controllers
+    event.added.forEach(inputSource => {
+      const controller = this.renderer.xr.getController(this.controllers.length);
+      this.controllerGroup.add(controller);
+      this.controllers.push({
+        inputSource,
+        controller
+      });
+    });
+    
+    // Handle removed controllers
+    event.removed.forEach(inputSource => {
+      const index = this.controllers.findIndex(info => info.inputSource === inputSource);
+      if (index !== -1) {
+        const controller = this.controllers[index].controller;
+        this.controllerGroup.remove(controller);
+        this.controllers.splice(index, 1);
+      }
     });
   }
 
-  // the Rift SDK returns the position in meters
-  // this scale factor allows the user to define how meters
-  // are converted to scene units.
+  update() {
+    // XR pose updates are handled automatically by three.js renderer.xr
+  }
 
-  this.scale = 1;
-
-  // If true will use "standing space" coordinate system where y=0 is the
-  // floor and x=0, z=0 is the center of the room.
-  this.standing = false;
-
-  // Distance from the users eyes to the floor in meters. Used when
-  // standing=true but the VRDisplay doesn't provide stageParameters.
-  this.userHeight = 1.6;
-
-  this.getVRDisplay = function() {
-    return vrDisplay;
-  };
-
-  this.setVRDisplay = function(value) {
-    vrDisplay = value;
-  };
-
-  this.getVRDisplays = function() {
-    console.warn('THREE.VRControls: getVRDisplays() is being deprecated.');
-    return vrDisplays;
-  };
-
-  this.getStandingMatrix = function() {
-    return standingMatrix;
-  };
-
-  this.update = function() {
-    if (vrDisplay) {
-      let pose;
-
-      if (vrDisplay.getFrameData) {
-        vrDisplay.getFrameData(frameData);
-        pose = frameData.pose;
-      }
-      if (!pose.orientation && vrDisplay.getPose) {
-        pose = vrDisplay.getPose();
-      }
-
-      if (pose.orientation !== null) {
-        object.quaternion.fromArray(pose.orientation);
-      }
-
-      // console.log(pose);
-
-      if (pose.position !== null) {
-        object.position.fromArray(pose.position);
-      } else {
-        object.position.set(0, 0, 0);
-      }
-
-      if (this.standing) {
-        if (vrDisplay.stageParameters) {
-          object.updateMatrix();
-
-          standingMatrix.fromArray(vrDisplay.stageParameters.sittingToStandingTransform);
-          object.applyMatrix(standingMatrix);
-        } else {
-          object.position.setY(object.position.y + this.userHeight);
-        }
-      }
-
-      object.position.multiplyScalar(scope.scale);
+  dispose() {
+    if (this.xrSession) {
+      this.xrSession.end();
+      this.xrSession = null;
     }
-  };
-
-  this.resetPose = function() {
-    if (vrDisplay) {
-      vrDisplay.resetPose();
+    
+    this.controllers = [];
+    if (this.controllerGroup.parent) {
+      this.controllerGroup.parent.remove(this.controllerGroup);
     }
-  };
+  }
+}
 
-  this.resetSensor = function() {
-    console.warn('THREE.VRControls: .resetSensor() is now .resetPose().');
-    this.resetPose();
-  };
-
-  this.zeroSensor = function() {
-    console.warn('THREE.VRControls: .zeroSensor() is now .resetPose().');
-    this.resetPose();
-  };
-
-  this.dispose = function() {
-    vrDisplay = null;
-  };
-};
-
-module.exports = VRControls;
+export { XRControls };

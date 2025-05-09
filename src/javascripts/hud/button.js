@@ -3,11 +3,15 @@ import {
   PlaneGeometry,
   Mesh,
   MeshBasicMaterial,
-  TextGeometry,
   Group,
 } from 'three';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import {Power0, TimelineMax} from 'gsap';
 import {EVENT, INITIAL_CONFIG} from '../constants';
+
+/**
+ * 注意: 在Three.js v0.176.0中，TextGeometry已从核心移动到附加组件中
+ */
 
 export default class Button {
   constructor(parent, font, name, x, y, emitter, width = 0.4, height = 0.2, borderWidth = 0.01, fontSize = 0.04) {

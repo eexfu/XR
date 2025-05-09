@@ -1,4 +1,9 @@
-import {Mesh, MeshBasicMaterial, TextGeometry} from 'three';
+import {Mesh, MeshBasicMaterial} from 'three';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+
+/**
+ * 注意: 在Three.js v0.176.0中，TextGeometry已从核心移动到附加组件中
+ */
 
 const FONT_SIZE = 0.4;
 
@@ -27,6 +32,10 @@ export default class Countdown {
   }
 
   setCountdown(n) {
+    if (this.countdown.geometry) {
+      this.countdown.geometry.dispose(); // 防止内存泄漏
+    }
+    
     const geometry = new TextGeometry(n, {
       font: this.font,
       size: FONT_SIZE,

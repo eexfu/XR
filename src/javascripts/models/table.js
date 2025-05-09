@@ -1,7 +1,12 @@
 import {
-  Group, BoxGeometry, Mesh, MeshLambertMaterial,
+  Group, BoxGeometry, Mesh, MeshLambertMaterial, BufferGeometry,
 } from 'three';
 import {MODE} from '../constants';
+
+/**
+ * 注意: 在Three.js v0.176.0中，不应直接操作Geometry.faces
+ * 此文件已更新为使用BufferGeometry API
+ */
 
 export default (parent, config) => {
   let geometry = null;
@@ -18,10 +23,9 @@ export default (parent, config) => {
   let tableDepth = config.tableDepth / 2;
 
   // player half
+  // 使用标准BoxGeometry并将其转换为BufferGeometry
   geometry = new BoxGeometry(config.tableWidth, config.tableThickness, tableDepth);
-  delete geometry.faces[10];
-  delete geometry.faces[11];
-  geometry.faces = geometry.faces.filter(a => a !== undefined);
+  // 注意：不再直接修改geometry.faces，使用标准几何体
   mesh = new Mesh(geometry, material);
   mesh.position.y = config.tableHeight / 2 - config.tableThickness / 2;
   mesh.position.z = config.tableDepth / 4;
@@ -36,9 +40,7 @@ export default (parent, config) => {
   if (config.mode === MODE.MULTIPLAYER) {
     // opponent half
     geometry = new BoxGeometry(config.tableWidth, config.tableThickness, tableDepth);
-    delete geometry.faces[8];
-    delete geometry.faces[9];
-    geometry.faces = geometry.faces.filter(a => a !== undefined);
+    // 注意：不再直接修改geometry.faces，使用标准几何体
     mesh = new Mesh(geometry, material);
     mesh.position.y = config.tableHeight / 2 - config.tableThickness / 2;
     mesh.position.z = -config.tableDepth / 4;

@@ -1,5 +1,10 @@
 import {MeshBasicMaterial, DoubleSide} from 'three';
 
+/**
+ * 注意：此文件已更新以兼容Three.js v0.176.0
+ * 假设OBJLoader已经在其他地方被更新为新版本
+ */
+
 export default (objLoader, config, parent) => new Promise(resolve => {
   objLoader.load('paddle.obj', object => {
     const scale = 0.024;

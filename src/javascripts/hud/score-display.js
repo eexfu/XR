@@ -1,7 +1,12 @@
 import {
-  MeshBasicMaterial, TextGeometry, Mesh, Group, CircleGeometry, DoubleSide,
+  MeshBasicMaterial, Mesh, Group, CircleGeometry, DoubleSide,
 } from 'three';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import {MODE} from '../constants';
+
+/**
+ * 注意: 在Three.js v0.176.0中，TextGeometry已从核心移动到附加组件中
+ */
 
 export default class ScoreDisplay {
   constructor(parent, config, font) {
@@ -64,7 +69,7 @@ export default class ScoreDisplay {
   }
 
   setSelfScore(value) {
-    this.selfScore.geometry.dynamic = true;
+    this.selfScore.geometry.dispose(); // 防止内存泄漏
 
     this.selfScore.geometry = new TextGeometry(`${value}`, {
       font: this.font,
@@ -73,7 +78,6 @@ export default class ScoreDisplay {
       curveSegments: 3,
     });
     this.selfScore.geometry.computeBoundingBox();
-    this.selfScore.geometry.verticesNeedUpdate = true;
 
     this.selfScore.position.x = -this.config.tableWidth / 2;
     this.selfScore.position.y = this.config.tableHeight + 0.2;
@@ -83,6 +87,8 @@ export default class ScoreDisplay {
   }
 
   setOpponentScore(value) {
+    this.opponentScore.geometry.dispose(); // 防止内存泄漏
+    
     this.opponentScore.geometry = new TextGeometry(`${value}`, {
       font: this.font,
       size: 0.35,

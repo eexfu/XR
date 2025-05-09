@@ -5,6 +5,8 @@
  * tab is inactive, so that timeouts and intervals are paused too. When an
  * interval (or more) are missed, only one interval will be fired, but it will
  * continue from the next interval on.
+ * 
+ * 注意：此文件已使用ES模块导出，与Three.js v0.176.0兼容
  */
 
 import randomstring from 'randomstring';

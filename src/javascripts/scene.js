@@ -30,8 +30,8 @@ import {
   Texture,
 } from 'three';
 import OBJLoader from './three/OBJLoader';
-import VREffect from './three/VREffect';
-import VRControls from './three/VRControls';
+import XRSessionHelper from './three/XRSessionHelper';
+import XRControls from './three/XRControls';
 
 import {
 STATE, MODE, INITIAL_CONFIG, EVENT, CONTROLMODE
@@ -43,7 +43,7 @@ import VR_MODES from './webvr-manager/modes';
 import Physics from './physics';
 import Hud from './hud';
 import SoundManager from './sound-manager';
-import WebVRManager from './webvr-manager';
+import WebXRManager from './webvr-manager';
 import Util from './webvr-manager/util';
 import Time from './util/time';
 
@@ -82,8 +82,10 @@ export default class Scene {
     this.controls = null;
     // three.js VREffect
     this.effect = null;
-    // VR display
-    this.display = null;
+    // XR session
+    this.xrSession = null;
+    // XR system
+    this.xrSystem = null;
     this.textureLoader = new TextureLoader();
     this.textureLoader.setPath('/textures/');
     this.objLoader = new OBJLoader();
@@ -431,38 +433,56 @@ export default class Scene {
   }
 
   setupVRControls() {
-    // apply VR headset positional data to camera.
-    this.controls = new VRControls(this.camera);
-    this.controls.standing = true;
-    this.controls.userHeight = this.config.cameraHeight;
+    this.controls = new XRControls(this.camera, this.renderer.domElement);
   }
 
   setupVR() {
-    // apply VR stereo rendering to renderer.
-    this.effect = new VREffect(this.renderer);
+    // apply XR rendering to renderer
+    this.effect = new XRSessionHelper(this.renderer);
     this.effect.setSize(window.innerWidth, window.innerHeight);
 
-    // create a VR manager helper to enter and exit VR mode.
+    // create a XR manager helper to enter and exit XR mode
     const params = {
       hideButton: false,
       isUndistorted: false,
     };
-    this.manager = new WebVRManager(this.renderer, this.effect, params);
-    // need the display for calling RAF on it instead of on window
-    navigator.getVRDisplays().then(displays => {
-      for (let i = 0; i < displays.length; i += 1) {
-        if (displays[i].capabilities.canPresent) {
-          this.display = displays[i];
-          if (this.display.displayName.indexOf('Daydream') !== -1) {
-            this.daydream = true;
+    this.manager = new WebXRManager(this.renderer, this.effect, params);
+    
+    // 检查WebXR支持
+    if (navigator.xr) {
+      navigator.xr.isSessionSupported('immersive-vr')
+        .then(supported => {
+          if (supported) {
+            this.xrSystem = navigator.xr;
+            // 设置兼容性标志
+            this.display = {
+              displayName: 'WebXR Display',
+              capabilities: {
+                canPresent: true
+              },
+              requestAnimationFrame: (callback) => {
+                if (this.xrSession) {
+                  return this.xrSession.requestAnimationFrame(callback);
+                } else {
+                  return window.requestAnimationFrame(callback);
+                }
+              }
+            };
+            
+            // 检测Daydream
+            const uaString = navigator.userAgent || navigator.vendor || window.opera;
+            if (uaString.indexOf('Daydream') !== -1) {
+              this.daydream = true;
+            }
           }
-          break;
-        }
-      }
-    }).catch(e => {
-      console.warn('error getting vr displays:');
-      console.warn(e);
-    });
+        })
+        .catch(e => {
+          console.warn('error checking XR support:');
+          console.warn(e);
+        });
+    } else {
+      console.warn('WebXR not supported in this browser');
+    }
   }
 
   setupThree() {
@@ -618,7 +638,7 @@ export default class Scene {
   }
 
   introPanAnimation() {
-    if (this.display && 'requestAnimationFrame' in this.display && this.controlMode === CONTROLMODE.VR) {
+    if (this.display && this.display.requestAnimationFrame && this.controlMode === CONTROLMODE.VR) {
       this.display.requestAnimationFrame(this.animate.bind(this));
     } else {
       requestAnimationFrame(this.animate.bind(this));

@@ -14,11 +14,11 @@
 
 /* global AFRAME */
 
-import EnterVRButton from './enter-vr-button';
+import EnterXRButton from './enter-vr-button';
 import State from './states';
 
 if (typeof AFRAME !== 'undefined' && AFRAME) {
-  AFRAME.registerComponent('webvr-ui', {
+  AFRAME.registerComponent('webxr-ui', {
     dependencies: ['canvas'],
 
     schema: {
@@ -41,7 +41,7 @@ if (typeof AFRAME !== 'undefined' && AFRAME) {
       scene.setAttribute('vr-mode-ui', {enabled: !this.data.enabled});
 
       if (this.data.enabled) {
-        if (this.enterVREl) {
+        if (this.enterXREl) {
           return;
         }
 
@@ -63,28 +63,37 @@ if (typeof AFRAME !== 'undefined' && AFRAME) {
           },
         };
 
-        const enterVR = this.enterVR = new EnterVRButton(scene.canvas, options);
+        const enterXR = this.enterXR = new EnterXRButton(scene.canvas, options);
 
-        this.enterVREl = enterVR.domElement;
+        this.enterXREl = enterXR.domElement;
 
-        document.body.appendChild(enterVR.domElement);
+        document.body.appendChild(enterXR.domElement);
 
-        enterVR.domElement.style.position = 'absolute';
-        enterVR.domElement.style.bottom = '10px';
-        enterVR.domElement.style.left = '50%';
-        enterVR.domElement.style.transform = 'translate(-50%, -50%)';
-        enterVR.domElement.style.textAlign = 'center';
-      } else if (this.enterVREl) {
-        this.enterVREl.parentNode.removeChild(this.enterVREl);
-        this.enterVR.remove();
+        enterXR.domElement.style.position = 'absolute';
+        enterXR.domElement.style.bottom = '10px';
+        enterXR.domElement.style.left = '50%';
+        enterXR.domElement.style.transform = 'translate(-50%, -50%)';
+        enterXR.domElement.style.textAlign = 'center';
+      } else if (this.enterXREl) {
+        this.enterXREl.parentNode.removeChild(this.enterXREl);
+        this.enterXR.remove();
       }
     },
 
     remove() {
-      if (this.enterVREl) {
-        this.enterVREl.parentNode.removeChild(this.enterVREl);
-        this.enterVR.remove();
+      if (this.enterXREl) {
+        this.enterXREl.parentNode.removeChild(this.enterXREl);
+        this.enterXR.remove();
       }
     },
+  });
+  
+  // 为了向后兼容，保留webvr-ui组件别名
+  AFRAME.registerComponent('webvr-ui', {
+    dependencies: ['webxr-ui'],
+    
+    init() {
+      console.warn('webvr-ui 组件已弃用，请使用 webxr-ui 组件');
+    }
   });
 }

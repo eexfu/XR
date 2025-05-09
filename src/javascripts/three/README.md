@@ -25,6 +25,11 @@
    - 所有几何体现在默认都是BufferGeometry
    - 移除了对旧版几何体API的依赖
 
+6. **Util工具更新**：
+   - 将CommonJS模块改为ES模块导出
+   - 添加对LineSegments类型的支持
+   - 优化了透明度设置逻辑
+
 请务必在更新Three.js版本时小心维护这些文件，并确保它们与使用它们的代码兼容。
 
 ## 注意事项
@@ -32,3 +37,4 @@
 1. 使用TextGeometry需要确保正确配置了three/addons路径
 2. 请确保您的构建系统(webpack等)正确处理这些导入路径
 3. 所有几何体操作应该使用BufferGeometry API，不再支持直接操作faces
+4. 所有工具类应使用ES模块导出方式

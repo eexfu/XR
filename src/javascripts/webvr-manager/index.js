@@ -19,9 +19,9 @@ const Modes = require('./modes.js');
 const Util = require('./util.js');
 
 /**
- * Helper for getting in and out of VR mode.
+ * Helper for getting in and out of XR mode.
  */
-function WebVRManager(renderer, effect, params) {
+function WebXRManager(renderer, effect, params) {
   this.params = params || {};
 
   this.mode = Modes.UNKNOWN;
@@ -50,23 +50,26 @@ function WebVRManager(renderer, effect, params) {
     this.button.setVisibility(false);
   }
 
-  // Check if the browser is compatible with WebVR.
-  this.getDeviceByType_(VRDisplay).then((hmd) => {
-    this.hmd = hmd;
+  // Initialize XR session
+  this.xrSession = null;
+  this.isVRCompatible = false;
+  this.isVRCompatibleOverride = false;
 
-    // Only enable VR mode if there's a VR device attached or we are running the
-    // polyfill on mobile.
-    if (!this.isVRCompatibleOverride) {
-      this.isVRCompatible = !hmd.isPolyfilled || Util.isMobile();
-    }
+  // Check if the browser is compatible with WebXR
+  this.checkXRCompatibility().then((isCompatible) => {
+    this.isVRCompatible = isCompatible;
 
     switch (this.startMode) {
       case Modes.MAGIC_WINDOW:
         this.setMode_(Modes.MAGIC_WINDOW);
         break;
       case Modes.VR:
-        this.enterVRMode_();
-        this.setMode_(Modes.VR);
+        if (this.isVRCompatible) {
+          this.enterXRMode_();
+          this.setMode_(Modes.VR);
+        } else {
+          this.setMode_(Modes.NORMAL);
+        }
         break;
       default:
         this.setMode_(Modes.NORMAL);
@@ -92,24 +95,14 @@ function WebVRManager(renderer, effect, params) {
     'msfullscreenchange',
     this.onFullscreenChange_.bind(this)
   );
-
-  // Bind to VR* specific events.
-  window.addEventListener(
-    'vrdisplaypresentchange',
-    this.onVRDisplayPresentChange_.bind(this)
-  );
-  window.addEventListener(
-    'vrdisplaydeviceparamschange',
-    this.onVRDisplayDeviceParamsChange_.bind(this)
-  );
 }
 
-WebVRManager.prototype = new Emitter();
+WebXRManager.prototype = new Emitter();
 
 // Expose these values externally.
-WebVRManager.Modes = Modes;
+WebXRManager.Modes = Modes;
 
-WebVRManager.prototype.render = function(scene, camera, timestamp) {
+WebXRManager.prototype.render = function(scene, camera, timestamp) {
   // Scene may be an array of two scenes, one for each eye.
   if (scene instanceof Array) {
     this.effect.render(scene[0], camera);
@@ -118,7 +111,7 @@ WebVRManager.prototype.render = function(scene, camera, timestamp) {
   }
 };
 
-WebVRManager.prototype.setVRCompatibleOverride = function(isVRCompatible) {
+WebXRManager.prototype.setVRCompatibleOverride = function(isVRCompatible) {
   this.isVRCompatible = isVRCompatible;
   this.isVRCompatibleOverride = true;
 
@@ -126,56 +119,74 @@ WebVRManager.prototype.setVRCompatibleOverride = function(isVRCompatible) {
   this.button.setMode(this.mode, this.isVRCompatible);
 };
 
-WebVRManager.prototype.setFullscreenCallback = function(callback) {
+WebXRManager.prototype.setFullscreenCallback = function(callback) {
   this.fullscreenCallback = callback;
 };
 
-WebVRManager.prototype.setVRCallback = function(callback) {
+WebXRManager.prototype.setVRCallback = function(callback) {
   this.vrCallback = callback;
 };
 
-WebVRManager.prototype.setExitFullscreenCallback = function(callback) {
+WebXRManager.prototype.setExitFullscreenCallback = function(callback) {
   this.exitFullscreenCallback = callback;
 };
 
 /**
- * Promise returns true if there is at least one HMD device available.
+ * 检查浏览器是否支持WebXR
  */
-WebVRManager.prototype.getDeviceByType_ = function(type) {
-  return new Promise((resolve, reject) => {
-    navigator.getVRDisplays().then((displays) => {
-      // Promise succeeds, but check if there are any displays actually.
-      for (let i = 0; i < displays.length; i++) {
-        if (displays[i] instanceof type || displays[i].displayName.includes('HTC') || displays[i].displayName.includes('Oculus') || displays[i].capabilities.canPresent) {
-          resolve(displays[i]);
-          break;
-        }
-      }
-      resolve(null);
-    }, () => {
-      // No displays are found.
-      resolve(null);
+WebXRManager.prototype.checkXRCompatibility = function() {
+  if (!navigator.xr) {
+    return Promise.resolve(false);
+  }
+  
+  return navigator.xr.isSessionSupported('immersive-vr')
+    .then((supported) => {
+      return supported;
+    })
+    .catch(() => {
+      return false;
     });
-  });
 };
 
 /**
- * Helper for entering VR mode.
+ * Helper for entering XR mode.
  */
-WebVRManager.prototype.enterVRMode_ = function() {
-  return this.hmd.requestPresent([{
-    source: this.renderer.domElement,
-    predistorted: this.predistorted,
-  }]);
+WebXRManager.prototype.enterXRMode_ = function() {
+  if (!navigator.xr) {
+    console.warn('WebXR not supported');
+    return Promise.resolve(false);
+  }
+
+  const sessionInit = {
+    optionalFeatures: ['local-floor', 'bounded-floor']
+  };
+
+  return navigator.xr.requestSession('immersive-vr', sessionInit)
+    .then((session) => {
+      this.xrSession = session;
+      
+      // 设置session的结束事件
+      session.addEventListener('end', () => {
+        this.xrSession = null;
+        this.setMode_(Modes.NORMAL);
+      });
+      
+      // 配置three.js渲染器使用XR会话
+      this.renderer.xr.enabled = true;
+      return this.renderer.xr.setSession(session);
+    })
+    .catch((error) => {
+      console.error('Error entering XR mode:', error);
+      return false;
+    });
 };
 
-WebVRManager.prototype.setMode_ = function(mode) {
+WebXRManager.prototype.setMode_ = function(mode) {
   const oldMode = this.mode;
   if (mode == this.mode) {
     console.warn('Not changing modes, already in %s', mode);
     return;
   }
-  // console.log('Mode change: %s => %s', this.mode, mode);
   this.mode = mode;
   this.button.setMode(mode, this.isVRCompatible);
 
@@ -186,7 +197,7 @@ WebVRManager.prototype.setMode_ = function(mode) {
 /**
  * Main button was clicked.
  */
-WebVRManager.prototype.onFSClick_ = function() {
+WebXRManager.prototype.onFSClick_ = function() {
   switch (this.mode) {
     case Modes.NORMAL:
     case Modes.UNKNOWN:
@@ -210,9 +221,8 @@ WebVRManager.prototype.onFSClick_ = function() {
 /**
  * The VR button was clicked.
  */
-WebVRManager.prototype.onVRClick_ = function() {
-  // TODO: Remove this hack when iOS has fullscreen mode.
-  // If this is an iframe on iOS, break out and open in no_fullscreen mode.
+WebXRManager.prototype.onVRClick_ = function() {
+  // 处理iOS上的iframe特殊情况
   if (this.mode == Modes.NORMAL && Util.isIOS() && Util.isIFrame()) {
     if (this.vrCallback) {
       this.vrCallback();
@@ -224,12 +234,24 @@ WebVRManager.prototype.onVRClick_ = function() {
       return;
     }
   }
-  this.enterVRMode_();
+  
+  if (this.mode === Modes.VR) {
+    // 如果已经在VR模式中，退出XR会话
+    if (this.xrSession) {
+      this.xrSession.end();
+    }
+  } else {
+    // 进入XR模式
+    this.enterXRMode_().then((success) => {
+      if (success) {
+        this.setMode_(Modes.VR);
+      }
+    });
+  }
 };
 
-WebVRManager.prototype.requestFullscreen_ = function() {
+WebXRManager.prototype.requestFullscreen_ = function() {
   const canvas = document.body;
-  // var canvas = this.renderer.domElement;
   if (canvas.requestFullscreen) {
     canvas.requestFullscreen();
   } else if (canvas.mozRequestFullScreen) {
@@ -243,7 +265,7 @@ WebVRManager.prototype.requestFullscreen_ = function() {
   }
 };
 
-WebVRManager.prototype.exitFullscreen_ = function() {
+WebXRManager.prototype.exitFullscreen_ = function() {
   if (document.exitFullscreen) {
     document.exitFullscreen();
   } else if (document.mozCancelFullScreen) {
@@ -255,20 +277,17 @@ WebVRManager.prototype.exitFullscreen_ = function() {
   }
 };
 
-WebVRManager.prototype.onVRDisplayPresentChange_ = function(e) {
-  console.log('onVRDisplayPresentChange_', e);
-  if (this.hmd.isPresenting) {
-    this.setMode_(Modes.VR);
-  } else {
-    this.setMode_(Modes.NORMAL);
-  }
+/**
+ * XR会话状态变化处理
+ */
+WebXRManager.prototype.onXRSessionEnded_ = function() {
+  this.setMode_(Modes.NORMAL);
 };
 
-WebVRManager.prototype.onVRDisplayDeviceParamsChange_ = function(e) {
-  console.log('onVRDisplayDeviceParamsChange_', e);
-};
-
-WebVRManager.prototype.onFullscreenChange_ = function(e) {
+/**
+ * 全屏状态变化处理
+ */
+WebXRManager.prototype.onFullscreenChange_ = function(e) {
   // If we leave full-screen, go back to normal mode.
   if (document.webkitFullscreenElement === null
       || document.mozFullScreenElement === null) {
@@ -276,4 +295,4 @@ WebVRManager.prototype.onFullscreenChange_ = function(e) {
   }
 };
 
-module.exports = WebVRManager;
+module.exports = WebXRManager;

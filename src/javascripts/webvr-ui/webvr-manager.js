@@ -17,20 +17,20 @@ import screenfull from 'screenfull';
 import State from './states';
 
 /**
- * WebVR Manager is a utility to handle VR displays
+ * WebXR Manager is a utility to handle XR displays
+ * 更新说明: 将WebVR更新为WebXR API
  */
-export default class WebVRManager extends EventEmitter {
+export default class WebXRManager extends EventEmitter {
   /**
-   * Construct a new WebVRManager
+   * Construct a new WebXRManager
    */
   constructor() {
     super();
     this.state = State.PREPARING;
+    this.currentSession = null;
 
-    // Bind vr display present change event to __onVRDisplayPresentChange
-    this.__onVRDisplayPresentChange = this.__onVRDisplayPresentChange.bind(this);
-    window.addEventListener('vrdisplaypresentchange', this.__onVRDisplayPresentChange);
-
+    // WebXR API不再使用vrdisplaypresentchange事件
+    // 我们将在进入和退出会话时手动触发状态变化
     this.__onChangeFullscreen = this.__onChangeFullscreen.bind(this);
     if (screenfull.enabled) {
       document.addEventListener(screenfull.raw.fullscreenchange, this.__onChangeFullscreen);
@@ -38,21 +38,21 @@ export default class WebVRManager extends EventEmitter {
   }
 
   /**
-   * Check if the browser is compatible with WebVR and has headsets.
-   * @return {Promise<VRDisplay>}
+   * Check if the browser is compatible with WebXR and has headsets.
+   * @return {Promise<XRSystem>}
    */
   checkDisplays() {
-    return WebVRManager.getVRDisplay()
-      .then((display) => {
-        this.defaultDisplay = display;
+    return WebXRManager.getXRSystem()
+      .then((xrSystem) => {
+        this.xrSystem = xrSystem;
         this.__setState(State.READY_TO_PRESENT);
-        return display;
+        return xrSystem;
       })
       .catch((e) => {
-        delete this.defaultDisplay;
+        delete this.xrSystem;
         if (e.name == 'NO_DISPLAYS') {
           this.__setState(State.ERROR_NO_PRESENTABLE_DISPLAYS);
-        } else if (e.name == 'WEBVR_UNSUPPORTED') {
+        } else if (e.name == 'WEBXR_UNSUPPORTED') {
           this.__setState(State.ERROR_BROWSER_NOT_SUPPORTED);
         } else {
           this.__setState(State.ERROR_UNKOWN);
@@ -64,7 +64,11 @@ export default class WebVRManager extends EventEmitter {
    * clean up object for garbage collection
    */
   remove() {
-    window.removeEventListener('vrdisplaypresentchange', this.__onVRDisplayPresentChange);
+    if (this.currentSession) {
+      this.currentSession.end();
+      this.currentSession = null;
+    }
+
     if (screenfull.enabled) {
       document.removeEventListener(screenfull.raw.fullscreenchanged, this.__onChangeFullscreen);
     }
@@ -73,78 +77,120 @@ export default class WebVRManager extends EventEmitter {
   }
 
   /**
-   * returns promise returning list of available VR displays.
-   * @return {Promise<VRDisplay>}
+   * returns promise returning WebXR system if available.
+   * @return {Promise<XRSystem>}
    */
-  static getVRDisplay() {
+  static getXRSystem() {
     return new Promise((resolve, reject) => {
-      if (!navigator || !navigator.getVRDisplays) {
-        const e = new Error('Browser not supporting WebVR');
-        e.name = 'WEBVR_UNSUPPORTED';
+      if (!navigator || !navigator.xr) {
+        const e = new Error('Browser not supporting WebXR');
+        e.name = 'WEBXR_UNSUPPORTED';
         reject(e);
         return;
       }
 
-      const rejectNoDisplay = () => {
-        // No displays are found.
-        const e = new Error('No displays found');
-        e.name = 'NO_DISPLAYS';
-        reject(e);
-      };
-
-      navigator.getVRDisplays().then(
-        (displays) => {
-          // Promise succeeds, but check if there are any displays actually.
-          for (let i = 0; i < displays.length; i++) {
-            if (displays[i].capabilities.canPresent) {
-              resolve(displays[i]);
-              break;
-            }
+      // 检查是否支持VR会话
+      navigator.xr.isSessionSupported('immersive-vr')
+        .then((supported) => {
+          if (supported) {
+            resolve(navigator.xr);
+          } else {
+            const e = new Error('No VR displays found');
+            e.name = 'NO_DISPLAYS';
+            reject(e);
           }
-
-          rejectNoDisplay();
-        },
-        rejectNoDisplay
-      );
+        })
+        .catch((error) => {
+          const e = new Error('WebXR check failed: ' + error.message);
+          e.name = 'WEBXR_CHECK_FAILED';
+          reject(e);
+        });
     });
   }
 
   /**
-   * Enter presentation mode with your set VR display
-   * @param {VRDisplay} display the display to request present on
-   * @param {HTMLCanvasElement} canvas
+   * 创建XR会话
+   * @param {string} mode - 会话模式 ('immersive-vr', 'immersive-ar', 等)
+   * @param {Object} options - 会话选项
+   * @returns {Promise<XRSession>} XR会话
+   */
+  createSession(mode, options = {}) {
+    if (!navigator.xr) {
+      return Promise.reject(new Error('WebXR not supported'));
+    }
+
+    return navigator.xr.requestSession(mode, options);
+  }
+
+  /**
+   * Enter presentation mode with your set XR display
+   * @param {XRSystem} xrSystem - XR系统对象
+   * @param {HTMLCanvasElement} canvas - 渲染使用的canvas
    * @return {Promise.<TResult>}
    */
-  enterVR(display, canvas) {
+  enterVR(xrSystem, canvas) {
+    if (!xrSystem) {
+      xrSystem = this.xrSystem;
+    }
+
     this.presentedSource = canvas;
-    return display.requestPresent([{
-      source: canvas,
-    }])
-      .then(
-        () => {},
-        // this could fail if:
-        // 1. Display `canPresent` is false
-        // 2. Canvas is invalid
-        // 3. not executed via user interaction
-        () => this.__setState(State.ERROR_REQUEST_TO_PRESENT_REJECTED)
-      );
+    
+    // 获取Three.js的WebGLRenderer上下文
+    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    
+    if (!gl) {
+      return Promise.reject(new Error('WebGL context not available'));
+    }
+    
+    // 配置XR会话
+    const sessionInit = {
+      optionalFeatures: ['local-floor', 'bounded-floor']
+    };
+    
+    return xrSystem.requestSession('immersive-vr', sessionInit)
+      .then((session) => {
+        this.currentSession = session;
+        
+        // 添加会话结束事件监听器
+        session.addEventListener('end', () => {
+          this.currentSession = null;
+          this.__setState(State.READY_TO_PRESENT);
+        });
+        
+        // 创建WebGL兼容的XR层
+        const xrGLLayer = new XRWebGLLayer(session, gl);
+        session.updateRenderState({ baseLayer: xrGLLayer });
+        
+        return session;
+      })
+      .catch(() => {
+        this.__setState(State.ERROR_REQUEST_TO_PRESENT_REJECTED);
+        return Promise.reject(new Error('Failed to start XR session'));
+      });
   }
 
   /**
    * Exit presentation mode on display
-   * @param {VRDisplay} display
+   * @param {XRSession} session - XR会话
    * @return {Promise.<TResult>}
    */
-  exitVR(display) {
-    return display.exitPresent()
-      .then(
-        () => {
+  exitVR(session) {
+    if (!session && this.currentSession) {
+      session = this.currentSession;
+    }
+    
+    if (session) {
+      return session.end()
+        .then(() => {
           this.presentedSource = undefined;
-        },
-        // this could fail if:
-        // 1. exit requested while not currently presenting
-        () => this.__setState(State.ERROR_EXIT_PRESENT_REJECTED)
-      );
+          this.currentSession = null;
+        })
+        .catch(() => {
+          this.__setState(State.ERROR_EXIT_PRESENT_REJECTED);
+        });
+    }
+    
+    return Promise.resolve();
   }
 
   /**
@@ -203,30 +249,10 @@ export default class WebVRManager extends EventEmitter {
   }
 
   /**
-   * Triggered on vr present change
-   * @param {Event} event
-   * @private
+   * 获取默认显示设备
+   * 兼容性方法，返回xrSystem对象
    */
-  __onVRDisplayPresentChange(event) {
-    try {
-      let display;
-      if (event.display) {
-        // In chrome its supplied on the event
-        display = event.display;
-      } else if (event.detail && event.detail.display) {
-        // Polyfill stores display under detail
-        display = event.detail.display;
-      }
-
-      if (display && display.isPresenting && display.getLayers()[0].source !== this.presentedSource) {
-        // this means a different instance of WebVRManager has requested to present
-        return;
-      }
-
-      const isPresenting = this.defaultDisplay && this.defaultDisplay.isPresenting;
-      this.__setState(isPresenting ? State.PRESENTING : State.READY_TO_PRESENT);
-    } catch (err) {
-      // continue regardless of error
-    }
+  get defaultDisplay() {
+    return this.xrSystem;
   }
 }

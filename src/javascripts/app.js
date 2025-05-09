@@ -8,7 +8,7 @@ import Clipboard from 'clipboard';
 import bodymovin from 'bodymovin';
 import EventEmitter from 'event-emitter';
 import VR_MODES from './webvr-manager/modes';
-import * as webvrui from './webvr-ui';
+import * as webxrui from './webvr-ui';
 import {
   EVENT, MODE, STATE, CONTROLMODE,
 } from './constants';
@@ -129,7 +129,7 @@ class PingPong {
     } else {
       ga('send', 'event', 'VR Display', 'custom', 'No VR Display');
     }
-    this.enterVRButton = new webvrui.EnterVRButton(this.scene.renderer.domElement, options);
+    this.enterVRButton = new webxrui.EnterXRButton(this.scene.renderer.domElement, options);
     document.getElementById('cardboard').appendChild(this.enterVRButton.domElement);
     if (this.mobileDetect.tablet() && !(/OculusBrowser/.test(navigator.userAgent))) {
       this.enterVRButton.disable();

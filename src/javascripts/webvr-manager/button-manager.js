@@ -18,8 +18,9 @@ const Modes = require('./modes.js');
 const Util = require('./util.js');
 
 /**
- * Everything having to do with the WebVR button.
+ * Everything having to do with the WebXR button.
  * Emits a 'click' event when it's clicked.
+ * 更新说明: 将WebVR更新为WebXR
  */
 function ButtonManager(opt_root) {
   const root = opt_root || document.body;
@@ -37,14 +38,14 @@ function ButtonManager(opt_root) {
   this.fsButton = fsButton;
 
   // Make the VR button.
-  const vrButton = this.createButton();
-  vrButton.src = this.ICONS.cardboard;
-  vrButton.title = 'Virtual reality mode';
-  vrButton.className += ' vr-button';
-  var s = vrButton.style;
-  vrButton.addEventListener('click', this.createClickHandler_('vr'));
-  root.appendChild(vrButton);
-  this.vrButton = vrButton;
+  const xrButton = this.createButton();
+  xrButton.src = this.ICONS.cardboard;
+  xrButton.title = 'Virtual reality mode';
+  xrButton.className += ' vr-button';
+  var s = xrButton.style;
+  xrButton.addEventListener('click', this.createClickHandler_('vr'));
+  root.appendChild(xrButton);
+  this.xrButton = xrButton;
 
   this.isVisible = true;
 }
@@ -65,7 +66,7 @@ ButtonManager.prototype.createButton = function() {
 };
 
 ButtonManager.prototype.setMode = function(mode, isVRCompatible) {
-  isVRCompatible = isVRCompatible || WebVRConfig.FORCE_ENABLE_VR;
+  isVRCompatible = isVRCompatible || WebXRConfig.FORCE_ENABLE_VR;
   if (!this.isVisible) {
     return;
   }
@@ -73,18 +74,18 @@ ButtonManager.prototype.setMode = function(mode, isVRCompatible) {
     case Modes.NORMAL:
       this.fsButton.style.display = 'block';
       this.fsButton.src = this.ICONS.fullscreen;
-      // this.vrButton.style.display = (isVRCompatible ? 'block' : 'none');
-      this.vrButton.style.display = 'none';
+      // 只有在XR兼容时才显示XR按钮
+      this.xrButton.style.display = (isVRCompatible ? 'block' : 'none');
       break;
     case Modes.MAGIC_WINDOW:
       this.fsButton.style.display = 'block';
       console.log('setting exit fs');
       this.fsButton.src = this.ICONS.exitFullscreen;
-      this.vrButton.style.display = 'none';
+      this.xrButton.style.display = 'none';
       break;
     case Modes.VR:
       this.fsButton.style.display = 'none';
-      this.vrButton.style.display = 'none';
+      this.xrButton.style.display = 'none';
       break;
   }
 
@@ -99,7 +100,7 @@ ButtonManager.prototype.setMode = function(mode, isVRCompatible) {
 ButtonManager.prototype.setVisibility = function(isVisible) {
   this.isVisible = isVisible;
   this.fsButton.style.display = isVisible ? 'block' : 'none';
-  this.vrButton.style.display = isVisible ? 'block' : 'none';
+  this.xrButton.style.display = isVisible ? 'block' : 'none';
 };
 
 ButtonManager.prototype.createClickHandler_ = function(eventName) {
@@ -117,6 +118,11 @@ ButtonManager.prototype.loadIcons_ = function() {
   this.ICONS.fullscreen = Util.base64('image/svg+xml', 'PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48c3ZnIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgeD0iMHB4IiB5PSIwcHgiIHZpZXdCb3g9IjAgMCA1My4yIDUzLjIiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDUzLjIgNTMuMjsiIHhtbDpzcGFjZT0icHJlc2VydmUiPjxnIGlkPSJMYXllcl8xIj48Zz48Zz4gPHBvbHlsaW5lIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlPSJ3aGl0ZSIgcG9pbnRzPSIxNy44LDIuNSAyLjUsMi41IDIuNSwxNi45Ii8+IDwvZz48Zz4gPHBvbHlsaW5lIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlPSJ3aGl0ZSIgcG9pbnRzPSIyLjUsMzYuMiAyLjUsNTAuNyAxNy44LDUwLjciLz4gPC9nPjxnPiA8cG9seWxpbmUgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2U9IndoaXRlIiBwb2ludHM9IjM1LjMsNTAuNyA1MC43LDUwLjcgNTAuNywzNi4yIi8+IDwvZz48Zz4gPHBvbHlsaW5lIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlPSJ3aGl0ZSIgcG9pbnRzPSI1MC43LDE2LjkgNTAuNywyLjUgMzUuMywyLjUiLz4gPC9nPjwvZz48L2c+PC9zdmc+');
   this.ICONS.exitFullscreen = Util.base64('image/svg+xml', 'PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48c3ZnIHZlcnNpb249IjEuMSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayIgeD0iMHB4IiB5PSIwcHgiIHZpZXdCb3g9IjAgMCA1MC4yIDUyLjgiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDUwLjIgNTIuODsiIHhtbDpzcGFjZT0icHJlc2VydmUiPjxnIGlkPSJMYXllcl8xIj4gIDxnPiAgICA8Zz4gPHBvbHlsaW5lIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlPSJ3aGl0ZSIgcG9pbnRzPSIxNS4zLDUyLjggMTUuMywzOC4zIDAsMzguMyIvPiA8L2c+ICAgIDxnPiA8cG9seWxpbmUgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSI1IiBzdHJva2U9IndoaXRlIiBwb2ludHM9IjUwLjIsMzguMyAzNC44LDM4LjMgMzQuOCw1Mi44Ii8+IDwvZz4gICAgPGc+IDxwb2x5bGluZSBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjUiIHN0cm9rZT0id2hpdGUiIHBvaW50cz0iMzQuOCwwIDM0LjgsMTQuNCA1MC4yLDE0LjQiLz4gPC9nPiAgICA8Zz4gPHBvbHlsaW5lIGZpbGw9Im5vbmUiIHN0cm9rZS13aWR0aD0iNSIgc3Ryb2tlPSJ3aGl0ZSIgcG9pbnRzPSIwLDE0LjQgMTUuMywxNC40IDE1LjMsMCIvPiA8L2c+ICA8L2c+PC9nPjwvc3ZnPg==');
   this.ICONS.settings = Util.base64('image/svg+xml', 'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNHB4IiBoZWlnaHQ9IjI0cHgiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI0ZGRkZGRiI+CiAgICA8cGF0aCBkPSJNMCAwaDI0djI0SDB6IiBmaWxsPSJub25lIi8+CiAgICA8cGF0aCBkPSJNMTkuNDMgMTIuOThjLjA0LS4zMi4wNy0uNjQuMDctLjk4cy0uMDMtLjY2LS4wNy0uOThsMi4xMS0xLjY1Yy4xOS0uMTUuMjQtLjQyLjEyLS42NGwtMi0zLjQ2Yy0uMTItLjIyLS4zOS0uMy0uNjEtLjIybC0yLjQ5IDFjLS41Mi0uNC0xLjA4LS43My0xLjY5LS45OGwtLjM4LTIuNjVDMTQuNDYgMi4xOCAxNC4yNSAyIDE0IDJoLTRjLS4yNSAwLS40Ni4xOC0uNDkuNDJsLS4zOCAyLjY1Yy0uNjEuMjUtMS4xNy41OS0xLjY5Ljk4bC0yLjQ5LTFjLS4yMy0uMDktLjQ5IDAtLjYxLjIybC0yIDMuNDZjLS4xMy4yMi0uMDcuNDkuMTIuNjRsMi4xMSAxLjY1Yy0uMDQuMzItLjA3LjY1LS4wNy45OHMuMDMuNjYuMDcuOThsLTIuMTEgMS42NWMtLjE5LjE1LS4yNC40Mi0uMTIuNjRsMiAzLjQ2Yy4xMi4yMi4zOS4zLjYxLjIybDIuNDktMWMuNTIuNCAxLjA4LjczIDEuNjkuOThsLjM4IDIuNjVjLjAzLjI0LjI0LjQyLjQ5LjQyaDRjLjI1IDAgLjQ2LS4xOC40OS0uNDJsLjM4LTIuNjVjLjYxLS4yNSAxLjE3LS41OSAxLjY5LS45OGwyLjQ5IDFjLjIzLjA5LjQ5IDAgLjYxLS4yMmwyLTMuNDZjLjEyLS4yMi4wNy0uNDktLjEyLS42NGwtMi4xMS0xLjY1ek0xMiAxNS41Yy0xLjkzIDAtMy41LTEuNTctMy41LTMuNXMxLjU3LTMuNSAzLjUtMy41IDMuNSAxLjU3IDMuNSAzLjUtMS41NyAzLjUtMy41IDMuNXoiLz4KPC9zdmc+Cg==');
+};
+
+// 全局WebXR配置，类似于原来的WebVRConfig
+window.WebXRConfig = window.WebXRConfig || {
+  FORCE_ENABLE_VR: false,
 };
 
 module.exports = ButtonManager;

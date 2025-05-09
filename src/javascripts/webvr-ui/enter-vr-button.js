@@ -13,19 +13,20 @@
 // limitations under the License.
 
 import EventEmitter from 'eventemitter3';
-import WebVRManager from './webvr-manager';
+import WebXRManager from './webvr-manager';
 import {createDefaultView} from './dom';
 import State from './states';
 
 /**
- * A button to allow easy-entry and messaging around a WebVR experience
+ * A button to allow easy-entry and messaging around a WebXR experience
+ * 更新说明: 更新为使用WebXR API
  * @class
  */
-export default class EnterVRButton extends EventEmitter {
+export default class EnterXRButton extends EventEmitter {
   /**
-   * Construct a new Enter VR Button
+   * Construct a new Enter XR Button
    * @constructor
-   * @param {HTMLCanvasElement} sourceCanvas the canvas that you want to present in WebVR
+   * @param {HTMLCanvasElement} sourceCanvas the canvas that you want to present in WebXR
    * @param {Object} [options] optional parameters
    * @param {HTMLElement} [options.domElement] provide your own domElement to bind to
    * @param {Boolean} [options.injectCSS=true] set to false if you want to write your own styles
@@ -70,8 +71,8 @@ export default class EnterVRButton extends EventEmitter {
     this.domElement = options.domElement || createDefaultView(options);
     this.__defaultDisplayStyle = this.domElement.style.display || 'initial';
 
-    // Create WebVR Manager
-    this.manager = new WebVRManager();
+    // Create WebXR Manager
+    this.manager = new WebXRManager();
     this.manager.checkDisplays();
     this.manager.addListener('change', (state) => this.__onStateChange(state));
 
@@ -85,7 +86,7 @@ export default class EnterVRButton extends EventEmitter {
   /**
    * Set the title of the button
    * @param {string} text
-   * @return {EnterVRButton}
+   * @return {EnterXRButton}
    */
   setTitle(text) {
     this.domElement.title = text;
@@ -104,7 +105,7 @@ export default class EnterVRButton extends EventEmitter {
   /**
    * Set the tooltip of the button
    * @param {string} tooltip
-   * @return {EnterVRButton}
+   * @return {EnterXRButton}
    */
   setTooltip(tooltip) {
     this.domElement.title = tooltip;
@@ -113,7 +114,7 @@ export default class EnterVRButton extends EventEmitter {
 
   /**
    * Show the button
-   * @return {EnterVRButton}
+   * @return {EnterXRButton}
    */
   show() {
     this.domElement.style.display = this.__defaultDisplayStyle;
@@ -123,7 +124,7 @@ export default class EnterVRButton extends EventEmitter {
 
   /**
    * Hide the button
-   * @return {EnterVRButton}
+   * @return {EnterXRButton}
    */
   hide() {
     this.domElement.style.display = 'none';
@@ -133,7 +134,7 @@ export default class EnterVRButton extends EventEmitter {
 
   /**
    * Enable the button
-   * @return {EnterVRButton}
+   * @return {EnterXRButton}
    */
   enable() {
     this.__setDisabledAttribute(false);
@@ -143,7 +144,7 @@ export default class EnterVRButton extends EventEmitter {
 
   /**
    * Disable the button from being clicked
-   * @return {EnterVRButton}
+   * @return {EnterXRButton}
    */
   disable() {
     this.__setDisabledAttribute(true);
@@ -163,11 +164,11 @@ export default class EnterVRButton extends EventEmitter {
   }
 
   /**
-   * Returns a promise getting the VRDisplay used
-   * @return {Promise.<VRDisplay>}
+   * Returns a promise getting the XRSystem used
+   * @return {Promise.<XRSystem>}
    */
-  getVRDisplay() {
-    return WebVRManager.getVRDisplay();
+  getXRSystem() {
+    return WebXRManager.getXRSystem();
   }
 
   /**
@@ -179,14 +180,14 @@ export default class EnterVRButton extends EventEmitter {
   }
 
   /**
-   * Request entering VR
+   * Request entering XR
    * @return {Promise}
    */
   requestEnterVR() {
     return new Promise((resolve, reject) => {
       if (this.options.onRequestStateChange(State.PRESENTING)) {
         return this.options.beforeEnter()
-          .then(() => this.manager.enterVR(this.manager.defaultDisplay, this.sourceCanvas))
+          .then(() => this.manager.enterVR(this.manager.xrSystem, this.sourceCanvas))
           .then(resolve);
       }
       reject(new Error(State.ERROR_REQUEST_STATE_CHANGE_REJECTED));
@@ -204,10 +205,10 @@ export default class EnterVRButton extends EventEmitter {
       if (this.options.onRequestStateChange(State.READY_TO_PRESENT)) {
         return this.options.beforeExit()
           .then(() =>
-            // if we were presenting VR, exit VR, if we are
+            // if we were presenting XR, exit XR, if we are
             // exiting fullscreen, exit fullscreen
             (initialState === State.PRESENTING
-              ? this.manager.exitVR(this.manager.defaultDisplay)
+              ? this.manager.exitVR(this.manager.currentSession)
               : this.manager.exitFullscreen()))
           .then(resolve);
       }
@@ -270,8 +271,8 @@ export default class EnterVRButton extends EventEmitter {
         case State.READY_TO_PRESENT:
           this.show();
           this.setTitle(this.options.textEnterVRTitle);
-          if (this.manager.defaultDisplay) {
-            this.setTooltip(`Enter VR using ${this.manager.defaultDisplay.displayName}`);
+          if (this.manager.xrSystem) {
+            this.setTooltip(`Enter VR using WebXR`);
           }
           this.__setDisabledAttribute(false);
           this.emit('ready');
@@ -279,11 +280,8 @@ export default class EnterVRButton extends EventEmitter {
 
         case State.PRESENTING:
         case State.PRESENTING_FULLSCREEN:
-          if (!this.manager.defaultDisplay
-            || !this.manager.defaultDisplay.capabilities.hasExternalDisplay
-            || state == State.PRESENTING_FULLSCREEN) {
-            this.hide();
-          }
+          // 不再需要检查VR硬件是否为外部显示设备
+          this.hide();
           this.setTitle(this.options.textExitVRTitle);
           this.__setDisabledAttribute(false);
           this.emit('enter');

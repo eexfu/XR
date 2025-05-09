@@ -13,7 +13,7 @@
 // limitations under the License.
 
 const _LOGO_SCALE = 0.8;
-const _WEBVR_UI_CSS_INJECTED = {};
+const _WEBXR_UI_CSS_INJECTED = {};
 
 /**
  * Generate the innerHTML for the button
@@ -57,9 +57,9 @@ export const createDefaultView = (options) => {
   const fontSize = options.height / 3;
   if (options.injectCSS) {
     // Check that css isnt already injected
-    if (!_WEBVR_UI_CSS_INJECTED[options.cssprefix]) {
+    if (!_WEBXR_UI_CSS_INJECTED[options.cssprefix]) {
       injectCSS(generateCSS(options, fontSize));
-      _WEBVR_UI_CSS_INJECTED[options.cssprefix] = true;
+      _WEBXR_UI_CSS_INJECTED[options.cssprefix] = true;
     }
   }
 

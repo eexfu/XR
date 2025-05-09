@@ -1,6 +1,12 @@
-import {Mesh, Line} from 'three';
+import {Mesh, Line, LineSegments} from 'three';
 
-module.exports = {
+/**
+ * 注意：此文件已更新为使用ES模块导出，以与Three.js v0.176.0兼容
+ * 添加了LineSegments支持，这是Three.js v0.176.0中推荐的线段渲染方式
+ */
+
+// 辅助函数集合
+const helpers = {
   // cuts a number of so its not smaller/bigger than the bounds
   cap: (value, cap1, cap2) => {
     if (cap1 > cap2) {
@@ -35,14 +41,12 @@ module.exports = {
   // set the transparency of an object and all its children
   setTransparency: (object, transparency) => {
     object.traverse(child => {
-      if (child instanceof Mesh) {
-        child.material.transparent = transparency !== 1;
-        child.material.opacity = transparency;
-      }
-      if (child instanceof Line) {
+      if (child instanceof Mesh || child instanceof Line || child instanceof LineSegments) {
         child.material.transparent = transparency !== 1;
         child.material.opacity = transparency;
       }
     });
   },
 };
+
+export default helpers;

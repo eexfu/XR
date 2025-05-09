@@ -23,4 +23,4 @@ const Modes = {
   VR: 3,
 };
 
-module.exports = Modes;
+export default Modes;

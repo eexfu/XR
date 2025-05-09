@@ -39,4 +39,4 @@ Emitter.prototype.on = function(eventName, callback) {
   }
 };
 
-module.exports = Emitter;
+export default Emitter;

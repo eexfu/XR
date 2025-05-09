@@ -70,4 +70,4 @@ Util.getScreenHeight = function() {
       * window.devicePixelRatio;
 };
 
-module.exports = Util;
+export default Util;

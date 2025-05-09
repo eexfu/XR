@@ -39,7 +39,7 @@ STATE, MODE, INITIAL_CONFIG, EVENT, CONTROLMODE
 import {
 cap, mirrorPosition, mirrorVelocity, setTransparency
 } from './util/helpers';
-import VR_MODES from './webvr-manager/modes';
+import XR_MODES from './webvr-manager/modes';
 import Physics from './physics';
 import Hud from './hud';
 import SoundManager from './sound-manager';
@@ -242,7 +242,7 @@ export default class Scene {
       this.datShitCray = !this.datShitCray;
     });
     this.emitter.on(EVENT.EXIT_BUTTON_PRESSED, () => {
-      if (this.manager.mode === VR_MODES.VR) {
+      if (this.manager.mode === XR_MODES.VR) {
         this.hud.message.setMessage('take off vr device');
       }
     });
@@ -309,7 +309,7 @@ export default class Scene {
             this.renderer.shadowMap.enabled = false;
           }, 100);
         } else if (this.quality === 1) {
-          if (Util.isMobile() && this.manager.mode !== VR_MODES.VR) {
+          if (Util.isMobile() && this.manager.mode !== XR_MODES.VR) {
             // doing this when in VR may break everything and turn it black
             this.renderer.setPixelRatio(window.devicePixelRatio / 2);
           }
@@ -469,6 +469,17 @@ export default class Scene {
               }
             };
             
+            // 设置XR会话事件监听
+            this.renderer.xr.addEventListener('sessionstart', () => {
+              this.xrSession = this.renderer.xr.getSession();
+              console.log('XR会话开始');
+            });
+            
+            this.renderer.xr.addEventListener('sessionend', () => {
+              console.log('XR会话结束');
+              this.xrSession = null;
+            });
+            
             // 检测Daydream
             const uaString = navigator.userAgent || navigator.vendor || window.opera;
             if (uaString.indexOf('Daydream') !== -1) {
@@ -490,6 +501,9 @@ export default class Scene {
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = BasicShadowMap;
+    
+    // 配置WebXR支持
+    this.renderer.xr.enabled = true;
 
     document.body.appendChild(this.renderer.domElement);
 
@@ -1104,7 +1118,7 @@ export default class Scene {
       // intersect the table with where the camera is looking and place the
       // paddle there. if we are in vr, position paddle below looking direction
       // so we dont have to look down at all times
-      const rayYDirection = this.manager.mode === VR_MODES.VR ? -0.7 : -0.3;
+      const rayYDirection = this.manager.mode === XR_MODES.VR ? -0.7 : -0.3;
       this.raycaster.setFromCamera(new Vector2(0, rayYDirection), this.camera);
       this.raycaster.far = 5;
       intersects = this.raycaster.intersectObject(this.tablePlane, false);
@@ -1386,11 +1400,18 @@ export default class Scene {
     this.mouseMoveSinceLastFrame.x = 0;
     this.mouseMoveSinceLastFrame.y = 0;
 
-    // render the scene through the manager.
+    // 使用WebXR的渲染方式
     this.manager.render(this.scene, this.camera, this.timestamp);
-    if (this.display && 'requestAnimationFrame' in this.display && this.controlMode === CONTROLMODE.VR) {
+    
+    // 使用正确的动画循环请求方式
+    if (this.xrSession && this.controlMode === CONTROLMODE.VR) {
+      // 如果处于活跃的XR会话中，使用XR会话的requestAnimationFrame
+      this.xrSession.requestAnimationFrame(this.animate.bind(this));
+    } else if (this.display && 'requestAnimationFrame' in this.display && this.controlMode === CONTROLMODE.VR) {
+      // 向后兼容：如果有display对象且有requestAnimationFrame方法
       this.display.requestAnimationFrame(this.animate.bind(this));
     } else {
+      // 常规动画循环
       requestAnimationFrame(this.animate.bind(this));
     }
   }

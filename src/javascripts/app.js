@@ -7,7 +7,7 @@ import MobileDetect from 'mobile-detect';
 import Clipboard from 'clipboard';
 import bodymovin from 'bodymovin';
 import EventEmitter from 'event-emitter';
-import VR_MODES from './webvr-manager/modes';
+import XR_MODES from './webvr-manager/modes';
 import * as webxrui from './webvr-ui';
 import {
   EVENT, MODE, STATE, CONTROLMODE,
@@ -270,7 +270,7 @@ class PingPong {
       }
     });
     this.emitter.on(EVENT.EXIT_BUTTON_PRESSED, () => {
-      if (this.scene.manager.mode === VR_MODES.VR) {
+      if (this.scene.manager.mode === XR_MODES.VR) {
         setTimeout(() => {location.reload();}, 3000);
       } else {
         location.reload();

@@ -1,3 +1,65 @@
+# JavaScript 源代码文件夹
+
+## WebXR 更新说明
+
+这个项目已经从基于WebVR的实现更新到了WebXR API，以兼容Three.js v0.176.0版本。主要更新内容包括：
+
+### 文件结构更新
+- VRControls.js -> XRControls.js
+- VREffect.js -> XRSessionHelper.js
+- WebVRManager -> WebXRManager
+- EnterVRButton -> EnterXRButton
+
+### API更新
+- navigator.getVRDisplays() -> navigator.xr.requestSession()
+- VR_MODES -> XR_MODES
+- CONTROLMODE.VR -> CONTROLMODE.XR
+
+### WebXR特性
+- 使用renderer.xr.enabled = true;
+- 使用immersive-vr会话类型
+- 使用XR会话管理生命周期
+
+### Three.js整合
+- 使用Three.js v0.176.0内置的WebXR支持
+- 使用ES模块导入导出
+- 移除过时的属性（如geometry.dynamic）
+
+### 向后兼容性
+- 保留了部分原始API结构，以保持代码的一致性
+- 在不支持WebXR的浏览器上提供回退方案
+
+## 文件夹结构
+
+- `app.js` - 主入口点
+- `scene.js` - 主要的3D场景
+- `constants.js` - 常量定义
+- `communication.js` - 多人通信
+- `physics.js` - 物理引擎集成
+- `sound-manager.js` - 音频管理
+- `webvr-manager/` - WebXR会话管理
+- `webvr-ui/` - WebXR UI组件
+- `three/` - Three.js相关自定义组件
+- `models/` - 3D模型
+- `hud/` - 平视显示器
+- `util/` - 工具函数
+
+## 模块导入关系
+
+```
+app.js
+ ├─ scene.js
+ │   ├─ physics.js
+ │   ├─ models/*.js
+ │   ├─ hud/*.js
+ │   ├─ three/*.js
+ │   └─ webvr-manager/
+ ├─ communication.js
+ ├─ constants.js
+ ├─ webvr-ui/
+ └─ util/
+```
+
 # WebVR 到 WebXR 更新总结
 
 本项目已从旧版WebVR API更新为现代WebXR API，以兼容Three.js v0.176.0版本。

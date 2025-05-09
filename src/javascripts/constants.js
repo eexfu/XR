@@ -5,7 +5,7 @@ export const MODE = {
 
 export const CONTROLMODE = {
   MOUSE: 'MOUSE',
-  VR: 'VR',
+  XR: 'XR',
 };
 
 export const STATE = {

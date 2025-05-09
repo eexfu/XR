@@ -44,7 +44,7 @@ class PingPong {
     if (this.iOS) {
       // cant reliably go fullscreen in ios so just hide the button
       this.hideFullscreenButton();
-      TweenMax.set('.enter-vr', {
+      TweenMax.set('.enter-xr', {
         right: '0',
         bottom: '-10px',
       });
@@ -129,14 +129,24 @@ class PingPong {
     } else {
       ga('send', 'event', 'VR Display', 'custom', 'No VR Display');
     }
-    this.enterVRButton = new webxrui.EnterXRButton(this.scene.renderer.domElement, options);
-    document.getElementById('cardboard').appendChild(this.enterVRButton.domElement);
+    const vrButton = new webxrui.EnterXRButton({
+      renderer: this.scene.renderer,
+      options,
+    });
+    if (vrButton.domElement) {
+      vrButton.domElement.onclick = () => {
+        this.scene.controlMode = CONTROLMODE.XR;
+      };
+      document.body.appendChild(vrButton.domElement);
+      vrButton.enabled = true;
+    }
+    this.enterVRButton = vrButton;
     if (this.mobileDetect.tablet() && !(/OculusBrowser/.test(navigator.userAgent))) {
       this.enterVRButton.disable();
     }
     this.enterVRButton.on('enter', () => {
       ga('send', 'event', 'VR Mode', 'click', 'Enter VR Button');
-      TweenMax.set('.enter-vr, .mute, .reset-pose', {
+      TweenMax.set('.enter-xr, .mute, .reset-pose', {
         display: 'none',
         opacity: 0,
       });
@@ -150,7 +160,7 @@ class PingPong {
         autoAlpha: 0,
       });
       this.scene.setupVRControls();
-      this.scene.controlMode = CONTROLMODE.VR;
+      this.scene.controlMode = CONTROLMODE.XR;
       this.scene.startGame();
       this.scene.onResize();
       this.hideFullscreenButton();
@@ -163,7 +173,7 @@ class PingPong {
       });
       this.hideFullscreenButton();
       if (this.scene.display) {
-        TweenMax.set('.enter-vr', {
+        TweenMax.set('.enter-xr', {
           display: 'block',
           opacity: 1,
         });
@@ -332,7 +342,7 @@ class PingPong {
     $('#open-room').on('click', this.onOpenRoomClick.bind(this));
     $('#join-room').on('click', this.onJoinRoomClick.bind(this));
     $('#play-again').on('click', this.onPlayAgainClick.bind(this));
-    $('.enter-vr').on('click', this.onEnterVRClick.bind(this));
+    $('.enter-xr').on('click', this.onEnterVRClick.bind(this));
     $('.about-button').on('click', this.onAboutButtonClick.bind(this));
     $('#start').on('click', this.onStartClick.bind(this));
     $('#tilt').on('click', this.onTiltClick.bind(this));
@@ -524,7 +534,7 @@ class PingPong {
       // eslint-disable-next-line
       this.scene.manager.onFSClick_();
       this.scene.setupVRControls();
-      this.scene.controlMode = CONTROLMODE.VR;
+      this.scene.controlMode = CONTROLMODE.XR;
     } else {
       this.scene.controlMode = CONTROLMODE.MOUSE;
     }

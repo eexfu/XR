@@ -73,7 +73,7 @@ export default class Scene {
     };
 
     // THREE.JS
-    // can be MOUSE or VR
+    // can be MOUSE or XR
     this.controlMode = CONTROLMODE.MOUSE;
     this.renderer = null;
     this.scene = null;
@@ -652,7 +652,7 @@ export default class Scene {
   }
 
   introPanAnimation() {
-    if (this.display && this.display.requestAnimationFrame && this.controlMode === CONTROLMODE.VR) {
+    if (this.display && this.display.requestAnimationFrame && this.controlMode === CONTROLMODE.XR) {
       this.display.requestAnimationFrame(this.animate.bind(this));
     } else {
       requestAnimationFrame(this.animate.bind(this));
@@ -1046,7 +1046,7 @@ export default class Scene {
     if (pos) {
       this.ghostPaddlePosition.copy(pos);
     }
-    if (this.controls && this.controlMode === CONTROLMODE.VR) {
+    if (this.controls && this.controlMode === CONTROLMODE.XR) {
       // Update VR headset position and apply to camera.
       this.controls.update();
       if (this.camera.position.x === 0
@@ -1112,7 +1112,7 @@ export default class Scene {
 
   computePaddlePosition() {
     let paddlePosition = null;
-    if (this.display && this.controlMode === CONTROLMODE.VR) {
+    if (this.display && this.controlMode === CONTROLMODE.XR) {
       let intersects = [];
       // cardboard / vive / oculus / daydream
       // intersect the table with where the camera is looking and place the
@@ -1265,7 +1265,7 @@ export default class Scene {
   updateHudControls() {
     // raycaster wants mouse from -1 to 1, not -0.5 to 0.5 like mousePosition is normalized
     let mouse = {};
-    if (this.controlMode === CONTROLMODE.VR || this.isMobile) {
+    if (this.controlMode === CONTROLMODE.XR || this.isMobile) {
       const zCamVec = new Vector3(0, 0, -1);
       const position = this.camera.localToWorld(zCamVec);
       this.crosshair.position.set(position.x, position.y, position.z);
@@ -1333,7 +1333,8 @@ export default class Scene {
         // and ball is moving towards us, it could move away from us
         // immediately after the opponent reset the ball and it that case
         // we wouldnt want a hit
-        && this.physics.ball.velocity.z > 0) {
+        && dist.dot(this.physics.ball.velocity) > 0
+      ) {
         this.onBallPaddleCollision(this.ball.position);
       }
       this.updateTrail();
@@ -1404,15 +1405,35 @@ export default class Scene {
     this.manager.render(this.scene, this.camera, this.timestamp);
     
     // 使用正确的动画循环请求方式
-    if (this.xrSession && this.controlMode === CONTROLMODE.VR) {
+    if (this.xrSession && this.controlMode === CONTROLMODE.XR) {
       // 如果处于活跃的XR会话中，使用XR会话的requestAnimationFrame
       this.xrSession.requestAnimationFrame(this.animate.bind(this));
-    } else if (this.display && 'requestAnimationFrame' in this.display && this.controlMode === CONTROLMODE.VR) {
+    } else if (this.display && 'requestAnimationFrame' in this.display && this.controlMode === CONTROLMODE.XR) {
       // 向后兼容：如果有display对象且有requestAnimationFrame方法
       this.display.requestAnimationFrame(this.animate.bind(this));
     } else {
       // 常规动画循环
       requestAnimationFrame(this.animate.bind(this));
+    }
+  }
+
+  render() {
+    // Update XR controls
+    if (this.controls && this.controlMode === CONTROLMODE.XR) {
+      this.controls.update();
+    }
+    // ... existing code ...
+  }
+
+  crosshairRaycasting() {
+    if (this.display && this.controlMode === CONTROLMODE.XR) {
+      // ... existing code ...
+    }
+  }
+
+  checkResetPose() {
+    if (this.controlMode === CONTROLMODE.XR || this.isMobile) {
+      // ... existing code ...
     }
   }
 }

@@ -13,7 +13,7 @@
     text-align: center;
     margin: auto;
     background-color: transparent;
-    font-family: AntiqueOlive;
+    font-family: 'RobotoSlab-Regular';
     border: 0;
     color: #fff;
     padding: 0;
@@ -25,7 +25,7 @@
     text-transform: uppercase;
   }
   .opponent-joined {
-    font-family: FuturaItalic;
+    font-family: 'Lato-Italic';
     font-size: 20px;
     letter-spacing: 1px;
   }
@@ -82,7 +82,7 @@
     position: relative;
     .placeholder {
       pointer-events: none;
-      font-family: AntiqueOlive;
+      font-family: 'RobotoSlab-Regular';
       letter-spacing: 0.23em;
       text-align: center;
       display: block;

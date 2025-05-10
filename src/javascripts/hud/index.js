@@ -30,13 +30,13 @@ export default class Hud {
     return new Promise(resolveOuter => {
       Promise.all([
         new Promise(resolve => {
-          fontloader.load('fonts/AntiqueOlive.json', font => {
+          fontloader.load('fonts/RobotoSlab-Regular.json', font => {
             this.antique = font;
             resolve();
           });
         }),
         new Promise(resolve => {
-          fontloader.load('fonts/Futura.json', font => {
+          fontloader.load('fonts/Lato-Regular.json', font => {
             this.font = font;
             resolve();
           });

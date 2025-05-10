@@ -1,5 +1,6 @@
-@include font-face('AntiqueOlive', '/fonts/AntiqueOlive');
-@include font-face('FuturaItalic', '/fonts/FuturaItalic');
+@include font-face('RobotoSlab-Regular', '../fonts/RobotoSlab-Regular');
+@include font-face('Lato-Italic', '../fonts/Lato-Italic');
+@include font-face('Lato-Regular', '../fonts/Lato-Regular');
 
 $font-size: 20px;
 $font-size-large: 24px;

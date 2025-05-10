@@ -37,7 +37,7 @@ export default class Message {
     this.buttons[config.rainbowText].buttonGroup.rotation.y = Math.PI;
   }
 
-  setMessage(text, font = 'futura') {
+  setMessage(text, font = 'lato-regular') {
     this.messageGroup.remove(...this.messageGroup.children);
     let splitText = [];
     if ($.isArray(text)) {
@@ -52,8 +52,8 @@ export default class Message {
     let lineHeight = 0;
     splitText.forEach((split, index) => {
       const geometry = new TextGeometry(split, {
-        font: font === 'futura' ? this.font : this.antique,
-        size: font === 'futura' ? FONT_SIZE : 0.15,
+        font: font === 'lato-regular' ? this.font : this.antique,
+        size: font === 'lato-regular' ? FONT_SIZE : 0.15,
         height: 0.001,
         curveSegments: 3,
       });

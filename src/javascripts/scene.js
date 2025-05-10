@@ -727,10 +727,10 @@ export default class Scene {
         return;
       }
       if (this.config.mode === MODE.SINGLEPLAYER) {
-        this.hud.message.setMessage('YOU HAVE\nFIVE LIVES', 'antique');
+        this.hud.message.setMessage('YOU HAVE\nFIVE LIVES', 'robotoslab-regular');
         this.time.setTimeout(resolve, 1500);
       } else {
-        this.hud.message.setMessage('FIRST WITH\n11PTS WINS', 'antique');
+        this.hud.message.setMessage('FIRST WITH\n11PTS WINS', 'robotoslab-regular');
         this.time.setTimeout(resolve, 2500);
       }
       this.hud.message.showMessage();
@@ -1035,7 +1035,7 @@ export default class Scene {
       this.hud.scoreDisplay.setLives(this.score.lives);
       this.sound.playUI('miss');
       if (this.score.lives === 1) {
-        this.hud.message.setMessage('LAST LIFE!', 'antique');
+        this.hud.message.setMessage('LAST LIFE!', 'robotoslab-regular');
         this.hud.message.showMessage();
         this.time.setTimeout(() => {this.hud.message.hideMessage();}, 1500);
       }

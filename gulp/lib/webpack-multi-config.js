@@ -47,15 +47,39 @@ module.exports = function(env) {
       rules: [
         {
           test: /\.js$/,
-          exclude: /node_modules/,
+          exclude: function(modulePath) {
+            // 排除node_modules，但包含screenfull这类可能使用ES2020+特性的库
+            return /node_modules/.test(modulePath) && 
+                  !/node_modules\/screenfull/.test(modulePath) &&
+                  !/node_modules\/fps/.test(modulePath);
+          },
           use: {
             loader: 'babel-loader',
             options: config.tasks.js.babel
           }
         },
-        { 
-          test: /\.json$/, 
-          use: 'json-loader'
+        // 专门处理screenfull库
+        {
+          test: /node_modules\/screenfull\/.*\.js$/,
+          use: {
+            loader: 'babel-loader',
+            options: {
+              presets: [
+                ["@babel/preset-env", {
+                  targets: {
+                    browsers: ["> 1%", "last 2 versions", "not dead"]
+                  },
+                  useBuiltIns: "usage",
+                  corejs: 3
+                }]
+              ],
+              plugins: [
+                "@babel/plugin-proposal-optional-chaining",
+                "@babel/plugin-proposal-nullish-coalescing-operator",
+                "@babel/plugin-transform-for-of"
+              ]
+            }
+          }
         },
         // {
         //   test: /\.js$/,
@@ -135,11 +159,23 @@ module.exports = function(env) {
       minimizer: [
         new TerserPlugin({
           terserOptions: {
-            ecma: 2015,
+            ecma: 2020,
+            parse: {
+              ecma: 2020,
+            },
             compress: {
+              ecma: 2020,
               drop_console: true,
             },
+            mangle: {
+              safari10: true,
+            },
+            output: {
+              ecma: 2020,
+              comments: false,
+            },
           },
+          extractComments: false,
         }),
       ],
     }

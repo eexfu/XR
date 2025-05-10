@@ -1,6 +1,6 @@
 import NoSleep from 'nosleep';
 import {
-  TweenMax, TimelineMax, Power0, Power1, Power4, SlowMo, Back,
+  TweenMax, TimelineMax, Power0, Power1, Power4, Back,
 } from 'gsap';
 import $ from 'zepto-modules';
 import MobileDetect from 'mobile-detect';
@@ -191,7 +191,7 @@ class PingPong {
   loadingAnimation() {
     return new Promise(resolve => {
       TweenMax.to('header span', 0.5, {
-        ease: SlowMo.ease.config(0.3, 0.7, false),
+        ease: Power1.easeInOut,
         width: '100%',
         onComplete: () => {
           TweenMax.set('header h1', {

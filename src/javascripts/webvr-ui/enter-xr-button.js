@@ -13,7 +13,7 @@
 // limitations under the License.
 
 import EventEmitter from 'eventemitter3';
-import WebXRManager from './webvr-manager';
+import WebXRManager from './webxr-manager';
 import {createDefaultView} from './dom';
 import State from './states';
 import { XR_SESSION_OPTIONS } from '../WebXRConfig';

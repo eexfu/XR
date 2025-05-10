@@ -40,9 +40,7 @@
       },
       "sass": {
         "indentedSyntax": true,
-        "includePaths": [
-          "./node_modules/normalize.css"
-        ]
+        "includePaths": []
       },
       "extensions": ["sass", "scss", "css"]
     },

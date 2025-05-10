@@ -17,6 +17,7 @@ import ButtonManager from './button-manager.js';
 import Emitter from './emitter.js';
 import Modes from './modes.js';
 import Util from './util.js';
+import { XR_SESSION_OPTIONS, XR_REFERENCE_SPACE_TYPES } from '../WebXRConfig.js';
 
 /**
  * Helper for getting in and out of XR mode.
@@ -56,6 +57,7 @@ class WebXRManager extends Emitter {
     this.xrSession = null;
     this.isVRCompatible = false;
     this.isVRCompatibleOverride = false;
+    this.referenceSpace = null;
 
     // Check if the browser is compatible with WebXR
     this.checkXRCompatibility().then((isCompatible) => {
@@ -125,22 +127,27 @@ class WebXRManager extends Emitter {
       return Promise.resolve(false);
     }
 
-    const sessionInit = {
-      optionalFeatures: ['local-floor', 'bounded-floor']
-    };
-
-    return navigator.xr.requestSession('immersive-vr', sessionInit)
+    return navigator.xr.requestSession('immersive-vr', XR_SESSION_OPTIONS)
       .then((session) => {
         this.xrSession = session;
         
         // 设置session的结束事件
-        session.addEventListener('end', () => {
-          this.setMode_(Modes.NORMAL);
-        });
+        session.addEventListener('end', this.onXRSessionEnded_.bind(this));
         
         // 配置three.js渲染器使用XR会话
         this.renderer.xr.enabled = true;
-        return this.renderer.xr.setSession(session);
+        return this.renderer.xr.setSession(session).then(() => {
+          // 获取参考空间
+          return session.requestReferenceSpace(XR_REFERENCE_SPACE_TYPES.LOCAL_FLOOR)
+            .then((space) => {
+              this.referenceSpace = space;
+              return true;
+            })
+            .catch((error) => {
+              console.error('Error requesting reference space:', error);
+              return false;
+            });
+        });
       })
       .catch((error) => {
         console.error('Error entering XR mode:', error);

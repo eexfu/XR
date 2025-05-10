@@ -12,10 +12,10 @@
 //     See the License for the specific language governing permissions and
 // limitations under the License.
 
-import WebXRManager from './webvr-manager';
+import WebXRManager from './webxr-manager';
 import State from './states';
 import * as dom from './dom';
-import EnterXRButton from './enter-vr-button';
+import EnterXRButton from './enter-xr-button';
 import './aframe-component';
 
 export {

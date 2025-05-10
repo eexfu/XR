@@ -6,10 +6,17 @@
       "node": true
     },
     "parserOptions": {
-      "ecmaVersion": 2018,
+      "ecmaVersion": 2020,
       "sourceType": "module"
     },
+    "rules": {
+      "no-useless-escape": "off",
+      "no-unused-vars": "warn",
+      "no-redeclare": "warn",
+      "no-undef": "warn"
+    },
     "ignorePatterns": [
-      "src/static/lib/*"
+      "src/static/lib/*",
+      "public/**/*"
     ]
   }

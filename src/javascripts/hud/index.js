@@ -1,4 +1,5 @@
-import {FontLoader, Group, Vector2} from 'three';
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
+import { Group, Vector2 } from 'three';
 import ScoreDisplay from './score-display';
 import Countdown from './countdown';
 import Message from './message';

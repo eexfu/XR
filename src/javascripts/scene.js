@@ -167,9 +167,11 @@ export default class Scene {
     // framerate drops so we have to ignore that in the fps counter
     this.firstActiveFrame = 0;
     // timestamp of when the scene was last rendered
-    this.lastRender = 0;
+    this.lastRenderTime = 0;
     // false if tab is switched, window hidden, app closed etc.
     this.tabActive = true;
+
+    this.animate = this.animate.bind(this);
   }
 
   setup() {
@@ -177,16 +179,25 @@ export default class Scene {
       this.setupThree();
       console.log('renderer:', this.renderer);
       console.log('renderer.domElement:', this.renderer.domElement);
-      this.setupXR();
+      
+      // WebXR的启用应尽早，但按钮由app.js中的VRButton负责
+      if (this.renderer) {
+        this.renderer.xr.enabled = true; 
+      } else {
+        console.error("Renderer not initialized before attempting to enable XR.");
+      }
+
       this.net = Net(this.scene, this.config);
 
-      this.renderer.domElement.requestPointerLock
-        = this.renderer.domElement.requestPointerLock
-        || this.renderer.domElement.mozRequestPointerLock;
+      this.renderer.domElement.requestPointerLock =
+        this.renderer.domElement.requestPointerLock ||
+        this.renderer.domElement.mozRequestPointerLock;
 
       this.renderer.domElement.onclick = () => {
-        if (this.config.state !== STATE.GAME_OVER
-         && this.renderer.domElement.requestPointerLock) {
+        if (
+          this.config.state !== STATE.GAME_OVER &&
+          this.renderer.domElement.requestPointerLock
+        ) {
           this.renderer.domElement.requestPointerLock();
         }
       };
@@ -194,7 +205,10 @@ export default class Scene {
       this.physics.setupWorld();
 
       if (DEBUG_MODE) {
-        this.physicsDebugRenderer = new CannonDebugRenderer(this.scene, this.physics.world);
+        this.physicsDebugRenderer = new CannonDebugRenderer(
+          this.scene,
+          this.physics.world
+        );
       }
 
       this.setupEventListeners();
@@ -202,7 +216,12 @@ export default class Scene {
       this.setupLights();
       this.setupEffects();
 
-      this.hud = new Hud(this.scene, this.config, this.emitter, this.objLoader);
+      this.hud = new Hud(
+        this.scene,
+        this.config,
+        this.emitter,
+        this.objLoader
+      );
       try {
         console.log('Creating crosshair...');  // 添加日志
         this.crosshair = Crosshair(this.scene, this.config);
@@ -215,16 +234,26 @@ export default class Scene {
       Promise.all([
         setupPaddles(this.objLoader, this.config, this.scene),
         this.hud.setup(),
-      ]).then(([{paddle, paddleOpponent}]) => {
-        this.paddle = paddle;
-        this.paddleOpponent = paddleOpponent;
-        this.paddle.position.copy(this.computePaddlePosition() || new Vector3());
-        this.ghostPaddlePosition.copy(this.paddle.position);
-        resolve('loaded');
-      }).catch(e => {
-        console.warn('Loading error:');
-        console.warn(e);
-      });
+      ])
+        .then(([{ paddle, paddleOpponent }]) => {
+          this.paddle = paddle;
+          this.paddleOpponent = paddleOpponent;
+          this.paddle.position.copy(
+            this.computePaddlePosition() || new Vector3()
+          );
+          this.ghostPaddlePosition.copy(this.paddle.position);
+          resolve('loaded');
+        })
+        .catch(e => {
+          console.warn('Loading error:');
+          console.warn(e);
+        });
+
+      if (this.renderer) {
+        this.renderer.setAnimationLoop(this.animate);
+      } else {
+        console.error("Renderer not initialized before setAnimationLoop in Scene.setup");
+      }
     });
   }
 
@@ -436,10 +465,13 @@ export default class Scene {
   }
 
   setupXRControls() {
-    // 启用XR
-    this.renderer.xr.enabled = true;
+    // 启用XR (如果尚未启用)
+    if (this.renderer && !this.renderer.xr.enabled) {
+        this.renderer.xr.enabled = true;
+    }
     
     // 添加XR控制器
+    // 注意：VRButton成功进入XR会话后，控制器才会真正可用
     const controller = this.renderer.xr.getController(0);
     this.scene.add(controller);
     
@@ -451,48 +483,17 @@ export default class Scene {
     });
 
     // 添加控制器移动事件监听
-    controller.addEventListener('move', (event) => {
-      if (this.config.state === STATE.PLAYING) {
-        const position = event.target.position;
-        this.paddle.position.set(
-          position.x,
-          this.config.tableHeight + 0.24,
-          position.z
-        );
-      }
-    });
-  }
-
-  setupXR() {
-    // 启用WebXR
-  this.renderer.xr.enabled = true;
-  
-  // 添加XR会话按钮
-  const button = document.createElement('button');
-  button.innerHTML = '进入VR';
-  button.style.position = 'absolute';
-  button.style.bottom = '20px';
-  button.style.left = '50%';
-  button.style.transform = 'translateX(-50%)';
-  button.style.display = 'none';
-  
-  document.body.appendChild(button);
-  
-  // 检查XR可用性
-  if ('xr' in navigator) {
-    navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
-      if (supported) {
-        button.style.display = 'block';
-        button.onclick = () => {
-          this.renderer.xr.getSession().then((session) => {
-            session.end();
-          }).catch(() => {
-            this.renderer.xr.getSession();
-          });
-        };
-      }
-    });
-  }
+    // 这个事件监听器通常在XR会话激活后才会有效工作
+    // controller.addEventListener('move', (event) => { // 'move' 事件可能不是所有控制器都支持或以这种方式触发
+    //   if (this.config.state === STATE.PLAYING && this.renderer.xr.isPresenting) { // 确保在XR模式下
+    //     // paddle的更新应该在render循环的updateControls中进行，而不是直接在这里
+    //     // this.paddle.position.set(
+    //     //   event.target.position.x,
+    //     //   this.config.tableHeight + 0.24,
+    //     //   event.target.position.z
+    //     // );
+    //   }
+    // });
   }
 
   setupThree() {
@@ -646,7 +647,13 @@ export default class Scene {
       console.log('set paddle.visible');
       this.paddle.visible = true;
       this.hud.container.visible = true;
-      this.setupXRControls();
+      // setupXRControls() 应该在场景设置早期被调用，以准备好控制器对象
+      // VRButton进入会话后，控制器事件才会开始触发。
+      // 如果之前没有调用，这里可以确保调用一次
+      if(!this.scene.children.includes(this.renderer.xr.getController(0))) {
+          this.setupXRControls(); 
+          console.log('setupXRControls called from startGame');
+      }
       console.log('setupXRControls completed');
       if (this.config.mode === MODE.SINGLEPLAYER) {
         console.log('Singleplayer mode, countdown');
@@ -1131,42 +1138,42 @@ export default class Scene {
   }
 
   computePaddlePosition() {
-    let paddlePosition = null;
+    let paddlePositionVec = new Vector3(); // 使用Vector3以方便后续操作
+
     if (this.renderer.xr.isPresenting) {
-      // XR模式下的位置计算
-      const controller = this.renderer.xr.getController(0);
+      const controller = this.renderer.xr.getController(0); // 获取主控制器
       if (controller) {
-        const position = new Vector3();
-        controller.getWorldPosition(position);
-        paddlePosition = {
-          x: position.x,
-          y: this.config.tableHeight + 0.24,
-          z: position.z
-        };
+        // 获取控制器的世界位置
+        controller.getWorldPosition(paddlePositionVec);
+        // 根据需要调整Y轴和可能的偏移
+        // 注意：直接使用控制器位置可能需要根据乒乓球桌的实际位置和玩家期望的握拍方式进行调整
+        // 例如，你可能需要将控制器的位置映射到球桌的相对坐标系中
+        paddlePositionVec.y = this.config.tableHeight + 0.1; // 示例：稍微高于桌面
+        // Z轴可能也需要根据球桌的tablePositionZ进行偏移
+        // paddlePositionVec.z += this.config.tablePositionZ; // 这取决于你的坐标系设置
       }
     } else if (this.pointerIsLocked) {
-      // 鼠标锁定模式
-      paddlePosition = {
-        x: this.ghostPaddlePosition.x + 0.0015 * this.mouseMoveSinceLastFrame.x,
-        y: this.config.tableHeight + 0.24,
-        z: this.ghostPaddlePosition.z + 0.0015 * this.mouseMoveSinceLastFrame.y,
-      };
+      paddlePositionVec.set(
+        this.ghostPaddlePosition.x + 0.0015 * this.mouseMoveSinceLastFrame.x,
+        this.config.tableHeight + 0.24, // 或者一个基于ghostPaddlePosition.y的计算值
+        this.ghostPaddlePosition.z + 0.0015 * this.mouseMoveSinceLastFrame.y
+      );
     } else {
-      // 普通鼠标模式
-      paddlePosition = {
-        x: 1.4 * this.mousePosition.x * this.config.tableWidth,
-        y: this.config.tableHeight + 0.24,
-        z: -this.config.tableDepth * 0.5 * (this.mousePosition.y + 0.5),
-      };
+      paddlePositionVec.set(
+        1.4 * this.mousePosition.x * this.config.tableWidth,
+        this.config.tableHeight + 0.24,
+        -this.config.tableDepth * 0.5 * (this.mousePosition.y + 0.5)
+      );
     }
     
-    if (paddlePosition) {
-      const x = cap(paddlePosition.x, this.config.tableWidth, -this.config.tableWidth);
-      const z = cap(paddlePosition.z, this.config.tablePositionZ + 0.5, 0);
-      const y = paddlePosition.y || this.config.tableHeight + 0.1 - z * 0.2;
-      return {x, y, z};
-    }
-    return this.paddle.position.clone();
+    // 应用边界限制
+    const x = cap(paddlePositionVec.x, this.config.tableWidth / 2, -this.config.tableWidth / 2); // 假设tableWidth是总宽度
+    const zMax = this.config.tablePositionZ + this.config.tableDepth / 2; // 球桌远端
+    const zMin = this.config.tablePositionZ - this.config.tableDepth / 2 + 0.1; // 球桌近端加一点偏移，防止穿模
+    const z = cap(paddlePositionVec.z, zMax, zMin); 
+    const y = paddlePositionVec.y; // Y值可能需要更复杂的逻辑，比如基于Z值倾斜等
+
+    return new Vector3(x, y, z); // 返回Vector3
   }
 
   computePaddleRotation(pos) {
@@ -1333,53 +1340,54 @@ export default class Scene {
     this.trail.geometry = new TubeGeometry(this.ballPath, 8, 0.01, 8, false);
   }
 
-  animate() {
-    // 使用XR的动画循环
-    this.renderer.setAnimationLoop(() => {
-      this.render();
-    });
-  }
-
-  render() {
+  animate(timestamp, frame) {
     if (!this.renderer || !this.scene || !this.camera) {
-      console.warn('renderer/scene/camera 未初始化');
+      console.warn('renderer/scene/camera 未初始化，无法在animate中执行');
       return;
     }
-    const timestamp = Date.now();
-    const delta = Math.min(timestamp - this.lastRender, 500);
+    
+    // 1. 计算 delta time (单位：秒)
+    // timestamp 通常是 performance.now() 返回的 DOMHighResTimeStamp (毫秒)
+    const delta = (timestamp - (this.lastRenderTime || timestamp)) / 1000.0;
+    this.lastRenderTime = timestamp;
+
     this.fps.tick();
 
     if (this.ball) {
       const dist = new Vector3();
       dist.subVectors(this.ball.position, this.paddle.position);
+      let ballMovingTowardsPlayer = false;
+      if (this.renderer.xr.isPresenting && frame) {
+        // XR模式下，需要考虑头显（相机）的朝向来判断球是否朝向玩家
+        // 这是一个简化的判断，可能需要更精确的向量计算
+        const cameraDirection = new Vector3();
+        this.camera.getWorldDirection(cameraDirection);
+        // 如果球的Z速度和相机方向的Z分量符号相反（假设相机看向-Z），则认为球大致朝向玩家
+        // 或者更简单：判断球与球拍的相对Z位置和球的Z速度
+         ballMovingTowardsPlayer = this.physics.ball.velocity.z * (this.ball.position.z > this.paddle.position.z ? -1 : 1) > 0;
+
+      } else {
+         ballMovingTowardsPlayer = this.physics.ball.velocity.z > 0; // 假设非XR下，Z正方向是朝向玩家的
+      }
+
       if (
-        // ball is close enough to the paddle for a hit
-        (dist.length() < 0.4
-          && Math.abs(dist.x) < 0.2
-          && Math.abs(dist.z) < 0.1
-        // make it a little easier on mobile
-        || this.isMobile && dist.length() < 0.4
-          && Math.abs(dist.x) < 0.3
-          && Math.abs(dist.z) < 0.1)
-        // and ball is moving towards us, it could move away from us
-        // immediately after the opponent reset the ball and it that case
-        // we wouldnt want a hit
-        && this.physics.ball.velocity.z > 0) {
+        (dist.length() < 0.4 && Math.abs(dist.x) < 0.2 && Math.abs(dist.z) < 0.1 ||
+         this.isMobile && dist.length() < 0.4 && Math.abs(dist.x) < 0.3 && Math.abs(dist.z) < 0.1) &&
+        ballMovingTowardsPlayer 
+      ) {
         this.onBallPaddleCollision(this.ball.position);
       }
       this.updateTrail();
     }
 
-    if (this.config.state === STATE.PLAYING
-      || this.config.state === STATE.WAITING
-      || this.config.state === STATE.COUNTDOWN
-      || this.config.state === STATE.PAUSED
-      || this.config.state === STATE.INSTRUCTIONS
-      || this.config.state === STATE.GAME_OVER) {
-      this.updateControls();
+    if (this.config.state === STATE.PLAYING ||
+        this.config.state === STATE.WAITING ||
+        this.config.state === STATE.COUNTDOWN ||
+        this.config.state === STATE.PAUSED ||
+        this.config.state === STATE.INSTRUCTIONS ||
+        this.config.state === STATE.GAME_OVER) {
+      this.updateControls(); // 更新控制器和相机（相机在非XR模式下由updateCamera处理）
       if (this.config.mode === MODE.MULTIPLAYER && this.config.state !== STATE.WAITING) {
-        // send where the paddle has moved, if it has moved
-        // every 5th frame is enough, this way we send less bytes down the line
         if (this.frameNumber % 5 === 0) {
           this.communication.sendMove(
             this.paddle.position,
@@ -1390,19 +1398,27 @@ export default class Scene {
     }
 
     if (this.config.state === STATE.PLAYING && this.tabActive) {
-      this.physics.step(delta / this.physicsTimeStep);
+      // physics.step 需要一个以秒为单位的时间差
+      // 如果 this.physicsTimeStep 是固定的更新频率（例如1000代表1秒更新一次物理），那么这里应该是固定的时间步长
+      // 或者如果 this.physicsTimeStep 是一个缩放因子，那么 delta / this.physicsTimeStep 是对的
+      // 假设 this.physicsTimeStep = 1000 意味着物理应该每秒模拟1000次 internal substeps，
+      // 或者说，你希望物理引擎内部使用 1/1000 秒的固定时间步。
+      // 如果是后者，并且你想让物理模拟追上真实时间，你需要多次调用 this.physics.step
+      // 但更常见的做法是：this.physics.step(delta); // 传递真实的delta时间（秒）
+      // 检查你的 Physics.js 中 step 方法是如何使用这个参数的
+      this.physics.step(delta / (this.physicsTimeStep / 1000.0)); // 假设 physicsTimeStep 是毫秒单位的期望间隔或因子
       this.updateBall();
       this.physics.predictCollisions(this.scene.getObjectByName('net-collider'), delta);
     }
 
     this.updateHudControls();
 
-    if (DEBUG_MODE) {
+    if (DEBUG_MODE && this.physicsDebugRenderer) { // 确保 debug renderer 初始化了
       this.physicsDebugRenderer.update();
     }
 
     if (this.tabActive && this.config.state !== STATE.PAUSED) {
-      this.time.step();
+      this.time.step(); // 如果 this.time 依赖于 delta，需要传递
     }
 
     if (this.datShitCray) {
@@ -1423,22 +1439,14 @@ export default class Scene {
       const color = new Color();
       color.setHSL((this.hue + 0.8) % 1, 1, 0.5);
       this.renderer.setClearColor(color);
-      this.hue = (this.hue + delta / 2000) % 1;
+      this.hue = (this.hue + delta / 2.0) % 1; // delta已经是秒了，所以除以2000变成除以2
     }
 
-    this.lastRender = timestamp;
     this.frameNumber += 1;
     this.mouseMoveSinceLastFrame.x = 0;
     this.mouseMoveSinceLastFrame.y = 0;
-
-    // render the scene through the manager.
-    // this.manager.render(this.scene, this.camera, this.timestamp);
-    // if (this.display && 'requestAnimationFrame' in this.display && this.controlMode === CONTROLMODE.VR) {
-    //   this.display.requestAnimationFrame(this.animate.bind(this));
-    // } else {
-    //   requestAnimationFrame(this.animate.bind(this));
-    // }
-
+    
+    // --- 最终的渲染调用 ---
     this.renderer.render(this.scene, this.camera);
   }
 }

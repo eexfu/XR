@@ -14,6 +14,7 @@ import {
 import Scene from './scene';
 import XRUtil from './xr-util';
 import Communication from './communication';
+import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
 
 document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLock;
 
@@ -105,6 +106,12 @@ class PingPong {
       this.loadingAnimation(),
     ]).then(() => {
       this.introAnimation();
+      if (this.scene.renderer) {
+        const vrButton = VRButton.createButton(this.scene.renderer);
+        document.body.appendChild(vrButton);
+      } else {
+        console.error('Renderer not available in app.js for VRButton.createButton');
+      }
     }).catch(e => {
       console.warn(e);
     });
@@ -116,31 +123,6 @@ class PingPong {
         display: 'none',
       });
     }
-  }
-
-  setupXRButton() {   
-    const button = document.createElement('button');
-    button.innerHTML = '进入XR';
-    button.style.position = 'absolute';
-    button.style.bottom = '20px';
-    button.style.left = '50%';
-    button.style.transform = 'translateX(-50%)';
-    button.style.display = 'none';
-    
-    document.getElementById('cardboard').appendChild(button);
-    
-    XRUtil.checkXRSupport().then(supported => {
-      if (supported) {
-        button.style.display = 'block';
-        button.onclick = () => {
-          this.scene.renderer.xr.getSession().then((session) => {
-            session.end();
-          }).catch(() => {
-            this.scene.renderer.xr.getSession();
-          });
-        };
-      }
-    });
   }
 
   // eslint-disable-next-line
@@ -491,11 +473,8 @@ class PingPong {
   }
 
   onTiltClick() {
-    ga('send', 'event', 'XR Mode', 'click', 'Enter 360 Button');
     if (XRUtil.isMobile() || this.mobileDetect.tablet()) {
-      console.log('切换到XR控制模式');
-      this.scene.setupXRControls();
-      this.scene.controlMode = CONTROLMODE.XR;
+      console.log('倾斜点击：移动设备，考虑是否仍需此逻辑或由VRButton统一处理');
     } else {
       console.log('切换到鼠标控制模式');
       this.scene.controlMode = CONTROLMODE.MOUSE;

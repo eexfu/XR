@@ -41,7 +41,7 @@ function ButtonManager(opt_root) {
   vrButton.src = this.ICONS.cardboard;
   vrButton.title = 'Virtual reality mode';
   vrButton.className += ' vr-button';
-  var s = vrButton.style;
+  s = vrButton.style;
   vrButton.addEventListener('click', this.createClickHandler_('vr'));
   root.appendChild(vrButton);
   this.vrButton = vrButton;
@@ -53,7 +53,7 @@ ButtonManager.prototype = new Emitter();
 ButtonManager.prototype.createButton = function() {
   const button = document.createElement('img');
   button.className = 'webvr-button';
-  const s = button.style;
+  // const s = button.style;
 
   // Prevent button from being selected and dragged.
   button.draggable = false;
@@ -64,8 +64,9 @@ ButtonManager.prototype.createButton = function() {
   return button;
 };
 
-ButtonManager.prototype.setMode = function(mode, isVRCompatible) {
-  isVRCompatible = isVRCompatible || WebVRConfig.FORCE_ENABLE_VR;
+// ButtonManager.prototype.setMode = function(mode, isVRCompatible) {
+//   isVRCompatible = isVRCompatible || WebVRConfig.FORCE_ENABLE_VR;
+ButtonManager.prototype.setMode = function(mode) {
   if (!this.isVisible) {
     return;
   }

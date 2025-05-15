@@ -8,8 +8,8 @@
  * Chromium: https://webvr.info/get-chrome
  *
  */
-
-import {Vector3, PerspectiveCamera} from 'three';
+/* global VRFrameData */
+import {Vector3, PerspectiveCamera, Matrix4} from 'three';
 
 const VREffect = function(renderer, onError) {
   let vrDisplay; let
@@ -80,9 +80,9 @@ const VREffect = function(renderer, onError) {
   // fullscreen
 
   const canvas = renderer.domElement;
-  let requestFullscreen;
-  let exitFullscreen;
-  let fullscreenElement;
+  // let requestFullscreen;
+  // let exitFullscreen;
+  // let fullscreenElement;
   const defaultLeftBounds = [0.0, 0.0, 0.5, 1.0];
   const defaultRightBounds = [0.5, 0.0, 0.5, 1.0];
 
@@ -371,4 +371,5 @@ const VREffect = function(renderer, onError) {
   }
 };
 
-module.exports = VREffect;
+// module.exports = VREffect;
+export default VREffect;

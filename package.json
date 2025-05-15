@@ -83,7 +83,7 @@
     "require-dir": "^1.2.0",
     "sass": "^1.32.13",
     "sass-loader": "^10.4.1",
-    "screenfull": "^6.0.2",
+    "screenfull": "^5.2.0",
     "style-loader": "^2.0.0",
     "terser-webpack-plugin": "^4.2.3",
     "three": "^0.176.0",
@@ -95,7 +95,9 @@
     "zepto-modules": "^1.0.1"
   },
   "dependencies": {
+    "es6-map": "^0.1.5",
     "eventemitter3": "^5.0.1",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "fps": "^0.0.3"
   }
 }

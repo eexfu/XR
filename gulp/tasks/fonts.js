@@ -12,7 +12,7 @@ var paths = {
 }
 
 var fontsTask = function() {
-  return gulp.src([paths.src, '*!README.md'])
+  return gulp.src([paths.src, '*!README.md'], { buffer: true })
     .pipe(newer(paths.dest)) // Ignore unchanged files
     .pipe(gulp.dest(paths.dest))
     .pipe(browserSync.stream())

@@ -192,7 +192,8 @@ export default class WebVRManager extends EventEmitter {
    * @param {Event} e
    * @private
    */
-  __onChangeFullscreen(e) {
+  // __onChangeFullscreen(e) {
+    __onChangeFullscreen() {
     if (screenfull.isFullscreen) {
       if (this.state != State.PRESENTING) {
         this.__setState(State.PRESENTING_FULLSCREEN);

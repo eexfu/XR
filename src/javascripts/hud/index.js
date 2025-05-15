@@ -1,4 +1,5 @@
-import {FontLoader, Group} from 'three';
+import { Group } from 'three';
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import ScoreDisplay from './score-display';
 import Countdown from './countdown';
 import Message from './message';
@@ -24,18 +25,20 @@ export default class Hud {
     this.modeWasSelected = false;
   }
 
-  setup() {
+  setup() {    
     const fontloader = new FontLoader();
     return new Promise(resolveOuter => {
       Promise.all([
         new Promise(resolve => {
-          fontloader.load('fonts/AntiqueOlive.json', font => {
+          fontloader.load('fonts/helvetiker_regular.typeface.json', font => {
+            console.log('Loaded font:', font);
             this.antique = font;
             resolve();
           });
         }),
         new Promise(resolve => {
-          fontloader.load('fonts/Futura.json', font => {
+          fontloader.load('fonts/helvetiker_regular.typeface.json', font => {
+            console.log('Loaded font:', font);
             this.font = font;
             resolve();
           });

@@ -2,7 +2,7 @@
  * @author dmarcos / https://github.com/dmarcos
  * @author mrdoob / http://mrdoob.com
  */
-
+/* global VRFrameData */
 import {Matrix4} from 'three';
 
 const VRControls = function(object, onError) {
@@ -124,4 +124,5 @@ const VRControls = function(object, onError) {
   };
 };
 
-module.exports = VRControls;
+// module.exports = VRControls;
+export default VRControls;

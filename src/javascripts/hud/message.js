@@ -1,10 +1,11 @@
 import wrap from 'wordwrap';
 import values from 'object.values';
 import {
-  Group, MeshBasicMaterial, TextGeometry, Mesh,
+  Group,
 } from 'three';
 import $ from 'zepto-modules';
 import Button from './button';
+import { createTextOutline } from '../util/textOutline.js';
 
 const CHAR_LIMIT = 16;
 const FONT_SIZE = 0.07;
@@ -31,7 +32,7 @@ export default class Message {
     this.buttons[config.rainbowText].buttonGroup.rotation.y = Math.PI;
   }
 
-  setMessage(text, font = 'futura') {
+  setMessage(text, font = 'Lato') {
     this.messageGroup.remove(...this.messageGroup.children);
     let splitText = [];
     if ($.isArray(text)) {
@@ -39,26 +40,26 @@ export default class Message {
     } else {
       splitText = this.wrap(text).split('\n').reverse();
     }
-    const material = new MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-    });
+
     let lineHeight = 0;
     splitText.forEach((split, index) => {
-      const geometry = new TextGeometry(split, {
-        font: font === 'futura' ? this.font : this.antique,
-        size: font === 'futura' ? FONT_SIZE : 0.15,
-        height: 0.001,
-        curveSegments: 3,
-      });
-      geometry.computeBoundingBox();
-      const message = new Mesh(geometry, material);
-      message.geometry = geometry;
-      message.position.x = -geometry.boundingBox.max.x / 2;
-      message.position.y = index * (geometry.boundingBox.max.y + LINE_SPACING);
+      // 使用createTextOutline代替TextGeometry和Mesh
+      const message = createTextOutline(
+        split, 
+        font === 'Lato' ? this.font : this.antique, 
+        {
+          size: font === 'Lato' ? FONT_SIZE : 0.15,
+          height: 0
+        }
+      );
+      
+      // 使用textOutline中保存的边界框信息
+      message.position.x = -message.userData.bbox.max.x / 2;
+      message.position.y = index * (message.userData.bbox.max.y + LINE_SPACING);
       this.messageGroup.add(message);
-      lineHeight = geometry.boundingBox.max.y;
+      lineHeight = message.userData.bbox.max.y;
     });
+    
     const height = splitText.length * (LINE_SPACING + lineHeight);
     this.messageGroup.position.y = this.config.tableHeight + 0.6 - height / 2;
     this.messageGroup.position.z = this.config.tablePositionZ + 0.5;
@@ -67,25 +68,24 @@ export default class Message {
   gameOver(score) {
     const multiplayer = score.self || score.opponent;
     this.messageGroup.remove(...this.messageGroup.children);
-    const material = new MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-    });
+    
     let text = '';
     if (multiplayer) {
       text = score.self > score.opponent ? 'YOU WON' : 'YOU LOST';
     } else {
       text = `${score.highest} ${score.highest === 1 ? 'PT' : 'PTS'}`;
     }
-    let geometry = new TextGeometry(text, {
-      font: this.antique,
-      size: FONT_SIZE * (multiplayer ? 2.5 : 3.5),
-      height: 0.001,
-      curveSegments: 3,
-    });
-    geometry.computeBoundingBox();
-    const gameOverText = new Mesh(geometry, material);
-    gameOverText.position.x = -geometry.boundingBox.max.x / 2;
+
+    const gameOverText = createTextOutline(
+      text, 
+      this.antique, 
+      {
+        size: FONT_SIZE * (multiplayer ? 2.5 : 3.5),
+        height: 0
+      }
+    );
+
+    gameOverText.position.x = -gameOverText.userData.bbox.max.x / 2;
     gameOverText.position.y = multiplayer ? 0.25 : 0.1;
     this.messageGroup.add(gameOverText);
 
@@ -94,15 +94,15 @@ export default class Message {
     this.buttons.restart = new Button(this.messageGroup, this.font, 'restart', -0.25, buttonsYPosition, this.emitter);
 
     if (multiplayer) {
-      geometry = new TextGeometry(`You: ${score.self} Opponent: ${score.opponent}`, {
-        font: this.font,
-        size: FONT_SIZE,
-        height: 0.001,
-        curveSegments: 3,
-      });
-      geometry.computeBoundingBox();
-      const scoreText = new Mesh(geometry, material);
-      scoreText.position.x = -geometry.boundingBox.max.x / 2;
+      const scoreText = createTextOutline(
+        `You: ${score.self} Opponent: ${score.opponent}`, 
+        this.font, 
+        {
+          size: FONT_SIZE,
+          height: 0
+        }
+      );
+      scoreText.position.x = -scoreText.userData.bbox.max.x / 2;
       scoreText.position.y = 0.07;
       this.messageGroup.add(scoreText);
     }

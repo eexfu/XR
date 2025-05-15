@@ -25,7 +25,7 @@ module.exports = function(env) {
     context: jsSrc,
     plugins: [
       new webpack.ProvidePlugin({
-        'Promise': 'es6-promise',
+        Promise: ['es6-promise', 'Promise']
       }),
       new ESLintPlugin({
         extensions: ['js'],
@@ -53,10 +53,10 @@ module.exports = function(env) {
             options: config.tasks.js.babel
           }
         },
-        { 
-          test: /\.json$/, 
-          use: 'json-loader'
-        },
+        // { 
+        //   test: /\.json$/, 
+        //   use: 'json-loader'
+        // },
         // {
         //   test: /\.js$/,
         //   exclude: /node_modules/,
@@ -143,6 +143,14 @@ module.exports = function(env) {
         }),
       ],
     }
+  }
+
+  if (env === 'production') {
+    webpackConfig.mode = 'production';
+  } else if (env === 'development') {
+    webpackConfig.mode = 'development';
+  } else {
+    webpackConfig.mode = 'none';
   }
 
   return webpackConfig

@@ -11,6 +11,8 @@ import {
   SmoothShading,
   Mesh,
   MeshPhongMaterial,
+  LineBasicMaterial,
+  LineSegments,
 } from 'three';
 
 const OBJLoader = function(manager) {
@@ -20,11 +22,11 @@ const OBJLoader = function(manager) {
 
   this.regexp = {
     // v float float float
-    vertex_pattern: /^v\s+([\d|\.|\+|\-|e|E]+)\s+([\d|\.|\+|\-|e|E]+)\s+([\d|\.|\+|\-|e|E]+)/,
+    vertex_pattern: /^v\s+([\d|.|+|-|e|E]+)\s+([\d|.|+|-|e|E]+)\s+([\d|.|+|-|e|E]+)/,
     // vn float float float
-    normal_pattern: /^vn\s+([\d|\.|\+|\-|e|E]+)\s+([\d|\.|\+|\-|e|E]+)\s+([\d|\.|\+|\-|e|E]+)/,
+    normal_pattern: /^vn\s+([\d|.|+|-|e|E]+)\s+([\d|.|+|-|e|E]+)\s+([\d|.|+|-|e|E]+)/,
     // vt float float
-    uv_pattern: /^vt\s+([\d|\.|\+|\-|e|E]+)\s+([\d|\.|\+|\-|e|E]+)/,
+    uv_pattern: /^vt\s+([\d|.|+|-|e|E]+)\s+([\d|.|+|-|e|E]+)/,
     // f vertex vertex vertex
     face_vertex: /^f\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)(?:\s+(-?\d+))?/,
     // f vertex/uv vertex/uv vertex/uv
@@ -335,11 +337,11 @@ OBJLoader.prototype = {
         const vLen = this.vertices.length;
         const uvLen = this.uvs.length;
 
-        for (var vi = 0, l = vertices.length; vi < l; vi++) {
+        for (let vi = 0, l = vertices.length; vi < l; vi++) {
           this.addVertexLine(this.parseVertexIndex(vertices[vi], vLen));
         }
 
-        for (var uvi = 0, l = uvs.length; uvi < l; uvi++) {
+        for (let uvi = 0, l = uvs.length; uvi < l; uvi++) {
           this.addUVLine(this.parseUVIndex(uvs[uvi], uvLen));
         }
       },
@@ -548,7 +550,7 @@ OBJLoader.prototype = {
     const container = new Group();
     container.materialLibraries = [].concat(state.materialLibraries);
 
-    for (var i = 0, l = state.objects.length; i < l; i++) {
+    for (let i = 0, l = state.objects.length; i < l; i++) {
       const object = state.objects[i];
       const {geometry} = object;
       const {materials} = object;
@@ -577,7 +579,7 @@ OBJLoader.prototype = {
 
       for (var mi = 0, miLen = materials.length; mi < miLen; mi++) {
         var sourceMaterial = materials[mi];
-        var material = undefined;
+        let material = undefined;
 
         if (this.materials !== null) {
           material = this.materials.create(sourceMaterial.name);
@@ -595,7 +597,11 @@ OBJLoader.prototype = {
           material.name = sourceMaterial.name;
         }
 
-        material.shading = sourceMaterial.smooth ? SmoothShading : FlatShading;
+        if(sourceMaterial.smooth) {
+          material.shading = SmoothShading;
+        } else {
+          material.flatShading = true;
+        }
 
         createdMaterials.push(material);
       }
@@ -605,13 +611,12 @@ OBJLoader.prototype = {
       var mesh;
 
       if (createdMaterials.length > 1) {
-        for (var mi = 0, miLen = materials.length; mi < miLen; mi++) {
-          var sourceMaterial = materials[mi];
+        for (let mi = 0, miLen = materials.length; mi < miLen; mi++) {
+          let sourceMaterial = materials[mi];
           buffergeometry.addGroup(sourceMaterial.groupStart, sourceMaterial.groupCount, mi);
         }
 
-        const multiMaterial = new MultiMaterial(createdMaterials);
-        mesh = (!isLine ? new Mesh(buffergeometry, multiMaterial) : new LineSegments(buffergeometry, multiMaterial));
+        mesh = (!isLine ? new Mesh(buffergeometry, createdMaterials) : new LineSegments(buffergeometry, createdMaterials));
       } else {
         mesh = (!isLine ? new Mesh(buffergeometry, createdMaterials[0]) : new LineSegments(buffergeometry, createdMaterials[0]));
       }
@@ -628,4 +633,5 @@ OBJLoader.prototype = {
 
 };
 
-module.exports = OBJLoader;
+// module.exports = OBJLoader;
+export default OBJLoader;

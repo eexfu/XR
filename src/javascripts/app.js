@@ -1,6 +1,7 @@
 import NoSleep from 'nosleep';
 import {
-  TweenMax, TimelineMax, Power0, Power1, Power4, SlowMo, Back,
+  TweenMax, TimelineMax, 
+  // Power0, Power1, Power4, SlowMo, Back,
 } from 'gsap';
 import $ from 'zepto-modules';
 import MobileDetect from 'mobile-detect';
@@ -20,7 +21,7 @@ document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLo
 
 const screenTransitionDuration = 1;
 const screenTransitionInterval = 0.1;
-const screenTransitionEase = Power4.easeInOut;
+const screenTransitionEase = "power4.out";
 
 /* global ga */
 
@@ -59,13 +60,13 @@ class PingPong {
     TweenMax.set('.checkmark', {visibility: 'hidden'}, 0.3);
     const tl = new TimelineMax({repeat: -1, repeatDelay: 1, paused: true});
     tl.to('.phone', 0.5, {
-      ease: Back.easeInOut.config(1),
+      ease: "back.inOut(1)",
       rotation: 180,
     });
     tl.set('.x', {visibility: 'hidden'}, 0.3);
     tl.set('.checkmark', {visibility: 'visible'}, 0.3);
     tl.to('.phone', 0.5, {
-      ease: Back.easeInOut.config(1),
+      ease: "back.inOut(1)",
       rotation: 90,
     }, '+=1');
     tl.set('.x', {visibility: 'visible'}, '-=0.2');
@@ -181,7 +182,7 @@ class PingPong {
   loadingAnimation() {
     return new Promise(resolve => {
       TweenMax.to('header span', 0.5, {
-        ease: SlowMo.ease.config(0.3, 0.7, false),
+        ease: "power1.inOut",
         width: '100%',
         onComplete: () => {
           TweenMax.set('header h1', {
@@ -231,7 +232,7 @@ class PingPong {
     const speed = 1.8;
     this.introBallTween.to(no, 1 / speed, {
       x: no.x > 0 ? -ballRadius : 1920 + ballRadius,
-      ease: Power0.easeNone,
+      ease: "none",
       onUpdate: () => {
         $ball.attr('cx', no.x);
         $shadow.attr('cx', no.x);
@@ -244,7 +245,7 @@ class PingPong {
     }, 0);
     this.introBallTween.to(no, 0.6 / speed, {
       y: 800,
-      ease: Power1.easeIn,
+      ease: "power1.in",
       onUpdate: () => {
         $ball.attr('cy', no.y);
       },
@@ -256,7 +257,7 @@ class PingPong {
     }, null, null, '-=0.216');
     this.introBallTween.to(no, 0.8 / speed, {
       y: startY + 150,
-      ease: Power1.easeOut,
+      ease: "power1.out",
       onUpdate: () => {
         $ball.attr('cy', no.y);
       },
@@ -482,7 +483,9 @@ class PingPong {
     }, screenTransitionInterval);
     tl.set('.intro-screen', {display: 'none'});
     tl.call(() => {
-      this.introBallTween.kill();
+      if (this.introBallTween && typeof this.introBallTween.kill === 'function') {
+    this.introBallTween.kill();
+  }
       this.introOver = true;
     });
     tl.staggerTo([

@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+/* global VRDisplay */
 const ButtonManager = require('./button-manager.js');
 const Emitter = require('./emitter.js');
 const Modes = require('./modes.js');
@@ -109,7 +109,8 @@ WebVRManager.prototype = new Emitter();
 // Expose these values externally.
 WebVRManager.Modes = Modes;
 
-WebVRManager.prototype.render = function(scene, camera, timestamp) {
+// WebVRManager.prototype.render = function(scene, camera, timestamp) {
+  WebVRManager.prototype.render = function(scene, camera) {
   // Scene may be an array of two scenes, one for each eye.
   if (scene instanceof Array) {
     this.effect.render(scene[0], camera);
@@ -142,7 +143,8 @@ WebVRManager.prototype.setExitFullscreenCallback = function(callback) {
  * Promise returns true if there is at least one HMD device available.
  */
 WebVRManager.prototype.getDeviceByType_ = function(type) {
-  return new Promise((resolve, reject) => {
+  // return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     navigator.getVRDisplays().then((displays) => {
       // Promise succeeds, but check if there are any displays actually.
       for (let i = 0; i < displays.length; i++) {
@@ -268,7 +270,8 @@ WebVRManager.prototype.onVRDisplayDeviceParamsChange_ = function(e) {
   console.log('onVRDisplayDeviceParamsChange_', e);
 };
 
-WebVRManager.prototype.onFullscreenChange_ = function(e) {
+// WebVRManager.prototype.onFullscreenChange_ = function(e) {
+  WebVRManager.prototype.onFullscreenChange_ = function() {
   // If we leave full-screen, go back to normal mode.
   if (document.webkitFullscreenElement === null
       || document.mozFullScreenElement === null) {

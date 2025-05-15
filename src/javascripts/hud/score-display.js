@@ -1,6 +1,7 @@
 import {
-  MeshBasicMaterial, TextGeometry, Mesh, Group, CircleGeometry, DoubleSide,
+  MeshBasicMaterial, Mesh, Group, CircleGeometry, DoubleSide,
 } from 'three';
+import { createTextOutline } from '../util/textOutline.js';
 import {MODE} from '../constants';
 
 export default class ScoreDisplay {
@@ -14,20 +15,17 @@ export default class ScoreDisplay {
   }
 
   setupText() {
-    let material = new MeshBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-    });
-    let geometry = new TextGeometry('0', {
-      font: this.font,
+    // 创建分数显示，使用textOutline
+    this.opponentScore = createTextOutline('0', this.font, {
       size: 0.35,
-      height: 0.001,
-      curveSegments: 3,
+      height: 0
     });
-    geometry.computeBoundingBox();
-
-    this.opponentScore = new Mesh(geometry, material);
-    this.selfScore = new Mesh(geometry.clone(), material.clone());
+    
+    // 克隆不可行，所以要重新创建
+    this.selfScore = createTextOutline('0', this.font, {
+      size: 0.35,
+      height: 0
+    });
 
     this.selfScore.rotation.y = Math.PI / 2;
     this.opponentScore.rotation.y = -Math.PI / 2;
@@ -41,12 +39,13 @@ export default class ScoreDisplay {
 
     this.lifeGroup = new Group();
     for (let i = 0; i < this.config.startLives; i += 1) {
-      geometry = new CircleGeometry(0.025, 32);
-      material = new MeshBasicMaterial({
+      const geometry = new CircleGeometry(0.025, 32);
+      const material = new MeshBasicMaterial({
         color: 0xffffff,
         transparent: true,
         side: DoubleSide,
         opacity: 1,
+        wireframe: true,
       });
       const life = new Mesh(geometry, material);
       life.position.x = i * 0.12;
@@ -64,38 +63,45 @@ export default class ScoreDisplay {
   }
 
   setSelfScore(value) {
-    this.selfScore.geometry.dynamic = true;
-
-    this.selfScore.geometry = new TextGeometry(`${value}`, {
-      font: this.font,
+    // 移除旧的分数
+    this.parent.remove(this.selfScore);
+    
+    // 创建新的分数显示
+    this.selfScore = createTextOutline(`${value}`, this.font, {
       size: 0.35,
-      height: 0.001,
-      curveSegments: 3,
+      height: 0
     });
-    this.selfScore.geometry.computeBoundingBox();
-    this.selfScore.geometry.verticesNeedUpdate = true;
-
+    
+    this.selfScore.rotation.y = Math.PI / 2;
+    
     this.selfScore.position.x = -this.config.tableWidth / 2;
     this.selfScore.position.y = this.config.tableHeight + 0.2;
     this.selfScore.position.z = this.config.tablePositionZ
       + this.config.tableDepth / 2.8
-      + this.selfScore.geometry.boundingBox.max.x / 2;
+      + this.selfScore.userData.bbox.max.x / 2;
+      
+    this.parent.add(this.selfScore);
   }
 
   setOpponentScore(value) {
-    this.opponentScore.geometry = new TextGeometry(`${value}`, {
-      font: this.font,
+    // 移除旧的分数
+    this.parent.remove(this.opponentScore);
+    
+    // 创建新的分数显示
+    this.opponentScore = createTextOutline(`${value}`, this.font, {
       size: 0.35,
-      height: 0.001,
-      curveSegments: 3,
+      height: 0
     });
-    this.opponentScore.geometry.computeBoundingBox();
+    
+    this.opponentScore.rotation.y = -Math.PI / 2;
 
     this.opponentScore.position.x = this.config.tableWidth / 2;
     this.opponentScore.position.y = this.config.tableHeight + 0.2;
     this.opponentScore.position.z = this.config.tablePositionZ
       - this.config.tableDepth / 4
-      - this.opponentScore.geometry.boundingBox.max.x / 2 + 0.2;
+      - this.opponentScore.userData.bbox.max.x / 2 + 0.2;
+      
+    this.parent.add(this.opponentScore);
   }
 
   setLives(value) {

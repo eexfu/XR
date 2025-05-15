@@ -1,6 +1,5 @@
 import {
-  TweenMax,
-  TimelineMax,
+  gsap,
   Power0,
   Power2,
   Power4,
@@ -29,8 +28,8 @@ import {
   TubeGeometry,
   Texture,
 } from 'three';
-import OBJLoader from './three/OBJLoader';
-import VREffect from './three/VREffect';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+// import VREffect from './three/VREffect';
 import VRControls from './three/VRControls';
 
 import {
@@ -181,7 +180,9 @@ export default class Scene {
   setup() {
     return new Promise(resolve => {
       this.setupThree();
-      this.setupVR();
+      console.log('renderer:', this.renderer);
+      console.log('renderer.domElement:', this.renderer.domElement);
+      // this.setupVR();
       this.net = Net(this.scene, this.config);
 
       this.renderer.domElement.requestPointerLock
@@ -207,8 +208,14 @@ export default class Scene {
       this.setupEffects();
 
       this.hud = new Hud(this.scene, this.config, this.emitter, this.objLoader);
-      this.crosshair = new Crosshair(this.scene, this.config);
-      this.crosshair.visible = false;
+      try {
+        console.log('Creating crosshair...');  // 添加日志
+        this.crosshair = Crosshair(this.scene, this.config);
+        console.log('Crosshair created:', this.crosshair);  // 添加日志
+        this.crosshair.visible = false;
+      } catch (error) {
+        console.error('Error creating crosshair:', error);
+      }
 
       Promise.all([
         setupPaddles(this.objLoader, this.config, this.scene),
@@ -439,8 +446,10 @@ export default class Scene {
 
   setupVR() {
     // apply VR stereo rendering to renderer.
-    this.effect = new VREffect(this.renderer);
-    this.effect.setSize(window.innerWidth, window.innerHeight);
+    // this.effect = new VREffect(this.renderer);
+    // this.effect.setSize(window.innerWidth, window.innerHeight);
+
+    this.renderer.xr.enabled = true;
 
     // create a VR manager helper to enter and exit VR mode.
     const params = {
@@ -470,6 +479,7 @@ export default class Scene {
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = BasicShadowMap;
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
 
     document.body.appendChild(this.renderer.domElement);
 
@@ -508,7 +518,8 @@ export default class Scene {
     this.tablePlane.rotation.x = -Math.PI * 0.45;
     this.tablePlane.position.y = this.config.tableHeight + 0.2;
     this.tablePlane.position.z = this.config.tablePositionZ + this.config.tableDepth / 2;
-    this.tablePlane.material.visible = false;
+    // this.tablePlane.material.visible = false;
+    this.tablePlane.visible = false;
     this.scene.add(this.tablePlane);
   }
 
@@ -556,11 +567,13 @@ export default class Scene {
   }
 
   startGame() {
+    console.log('startGame called');
     // prepare the scene
     this.hud.container.visible = false;
     const table1 = this.scene.getObjectByName('table-self');
     const table2 = this.scene.getObjectByName('table-opponent');
-    TweenMax.set('canvas', {
+    console.log('controller Mode:', this.controlMode, 'config.mode:', this.config.mode);
+    gsap.set('canvas', {
       visibility: 'visible',
     });
     if (this.config.mode === MODE.MULTIPLAYER) {
@@ -588,26 +601,37 @@ export default class Scene {
     }
 
     this.introPanAnimation().then(() => {
+      console.log('introPanAnimation completed');
       this.viewport = {
         width: $(this.renderer.domElement).width(),
         height: $(this.renderer.domElement).height(),
       };
       if (Util.isMobile()) {
-        TweenMax.set('.reset-pose', {
+        gsap.set('.reset-pose', {
           display: 'block',
         });
       }
-      if (this.manager.isVRCompatible) {
-        TweenMax.set('.enter-vr', {
+      else {
+        console.log('isMobile is false');
+      }
+      if (this.manager && this.manager.isVRCompatible) {
+        gsap.set('.enter-vr', {
           display: 'block',
         });
       }
+      else {
+        console.log('isVRCompatible is false');
+      }
+      console.log('set paddle.visible');
       this.paddle.visible = true;
       this.hud.container.visible = true;
       this.setupVRControls();
+      console.log('setupVRControls completed');
       if (this.config.mode === MODE.SINGLEPLAYER) {
+        console.log('Singleplayer mode, countdown');
         this.countdown();
       } else {
+        console.log('Multiplayer mode, countdown');
         this.paddleOpponent.visible = true;
         this.playerRequestedCountdown = true;
         this.communication.sendRequestCountdown();
@@ -624,7 +648,7 @@ export default class Scene {
       requestAnimationFrame(this.animate.bind(this));
     }
     return new Promise(resolve => {
-      const tl = new TimelineMax();
+      const tl = new gsap.timeline();
       this.camera.lookAt(
         new Vector3().lerpVectors(
           this.ghostPaddlePosition,
@@ -668,6 +692,7 @@ export default class Scene {
   }
 
   countdown() {
+    console.log('countdown called');
     if (this.config.state === STATE.COUNTDOWN || this.config.state === STATE.PLAYING) {
       return;
     }
@@ -694,6 +719,7 @@ export default class Scene {
           this.hud.countdown.hideCountdown();
           // start game by adding ball
           if (this.config.mode === MODE.SINGLEPLAYER) {
+            console.log('addBall called from countdown');
             this.addBall();
             this.physics.initBallPosition();
           } else if (this.config.mode === MODE.MULTIPLAYER
@@ -792,7 +818,8 @@ export default class Scene {
     // show the opponent paddle slightly behind
     // the actual position to prevent the ball going
     // 'through' it
-    TweenMax.to(no, 0.14, {
+    gsap.to(no, {
+      duration: 0.14,
       x: pos.x,
       y: pos.y,
       z: pos.z - 0.1,
@@ -839,7 +866,8 @@ export default class Scene {
         mirrorPosition(data.point, this.config.tablePositionZ)
       );
       this.ballInterpolationAlpha = 1;
-      TweenMax.to(this, 0.5, {
+      gsap.to(this, {
+        duration: 0.5,
         ease: Power0.easeNone,
         ballInterpolationAlpha: 0,
       });
@@ -995,7 +1023,10 @@ export default class Scene {
   }
 
   addBall() {
+    console.log('addBall called, state before:', this.config.state);
     this.config.state = STATE.PLAYING;
+    console.log('addBall called, state after:', this.config.state);
+  // ...原有代码...
     if (this.ball) {
       this.ball.visible = true;
       this.physics.initBallPosition();
@@ -1068,7 +1099,8 @@ export default class Scene {
     if (this.cameraTween) {
       this.cameraTween.kill();
     }
-    this.cameraTween = TweenMax.to(this.camera.rotation, 0.5, {
+    this.cameraTween = gsap.to(this.camera.rotation, {
+      duration: 0.5,
       x: endRotation.x,
       y: endRotation.y,
       z: endRotation.z,
@@ -1149,7 +1181,7 @@ export default class Scene {
   ballHitAnimation() {
     if (!(this.hitTween && this.hitTween.isActive()) && this.hitAvailable) {
       this.hitAvailable = false;
-      this.hitTween = new TimelineMax({
+      this.hitTween = new gsap.timeline({
         onComplete: () => {this.hitAvailable = true;},
       });
       this.lastHitPosition = this.ball.position.clone();
@@ -1167,16 +1199,18 @@ export default class Scene {
 
   haloAnimation(position) {
     this.halo.position.copy(position);
-    TweenMax.fromTo(this.halo.material, 1, {
+    gsap.fromTo(this.halo.material, {
       opacity: 0.2,
     }, {
+      duration: 1,
       opacity: 0,
     });
-    TweenMax.fromTo(this.halo.scale, 1, {
+    gsap.fromTo(this.halo.scale, {
       x: 0.001,
       y: 0.001,
       z: 0.001,
     }, {
+      duration: 1,
       x: 1,
       y: 1,
       z: 1,
@@ -1194,9 +1228,10 @@ export default class Scene {
     const BLUE_TABLE = `#${new Color(this.config.colors.BLUE_TABLE).getHexString()}`;
     const GREEN_TABLE = `#${new Color(this.config.colors.GREEN_TABLE).getHexString()}`;
     const to = this.communication.isHost ? BLUE_TABLE : GREEN_TABLE;
-    TweenMax.fromTo(no, 0.8, {
+    gsap.fromTo(no, {
       color: brightenedColor,
     }, {
+      duration: 0.8,
       color: to,
       ease: Power4.easeOut,
       onUpdate: () => {
@@ -1280,6 +1315,16 @@ export default class Scene {
   }
 
   animate() {
+    // 使用 requestAnimationFrame 而不是 setAnimationLoop
+    requestAnimationFrame(this.animate.bind(this));
+    this.render();
+  }
+
+  render() {
+    if (!this.renderer || !this.scene || !this.camera) {
+      console.warn('renderer/scene/camera 未初始化');
+      return;
+    }
     const timestamp = Date.now();
     const delta = Math.min(timestamp - this.lastRender, 500);
     this.fps.tick();
@@ -1367,11 +1412,17 @@ export default class Scene {
     this.mouseMoveSinceLastFrame.y = 0;
 
     // render the scene through the manager.
-    this.manager.render(this.scene, this.camera, this.timestamp);
-    if (this.display && 'requestAnimationFrame' in this.display && this.controlMode === CONTROLMODE.VR) {
-      this.display.requestAnimationFrame(this.animate.bind(this));
+    // this.manager.render(this.scene, this.camera, this.timestamp);
+    // if (this.display && 'requestAnimationFrame' in this.display && this.controlMode === CONTROLMODE.VR) {
+    //   this.display.requestAnimationFrame(this.animate.bind(this));
+    // } else {
+    //   requestAnimationFrame(this.animate.bind(this));
+    // }
+
+    if (this.manager) {
+      this.manager.render(this.scene, this.camera, Date.now());
     } else {
-      requestAnimationFrame(this.animate.bind(this));
+      this.renderer.render(this.scene, this.camera);
     }
   }
 }

@@ -1,5 +1,8 @@
-@include font-face('AntiqueOlive', '/fonts/AntiqueOlive');
-@include font-face('FuturaItalic', '/fonts/FuturaItalic');
+// @include font-face('RobotoSlab', '/fonts/RobotoSlab');
+// @include font-face('Lato', '/fonts/Lato');
+
+$font-primary: 'Roboto Slab', serif;
+$font-secondary: 'Lato', sans-serif;
 
 $font-size: 20px;
 $font-size-large: 24px;

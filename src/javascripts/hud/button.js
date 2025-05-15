@@ -3,11 +3,11 @@ import {
   PlaneGeometry,
   Mesh,
   MeshBasicMaterial,
-  TextGeometry,
   Group,
 } from 'three';
 import {Power0, TimelineMax} from 'gsap';
 import {EVENT, INITIAL_CONFIG} from '../constants';
+import { createTextOutline } from '../util/textOutline.js';
 
 export default class Button {
   constructor(parent, font, name, x, y, emitter, width = 0.4, height = 0.2, borderWidth = 0.01, fontSize = 0.04) {
@@ -111,19 +111,20 @@ export default class Button {
   }
 
   setupText() {
-    const material = new MeshBasicMaterial({
-      color: 0xffffff,
-    });
-    const geometry = new TextGeometry(this.name.toUpperCase(), {
-      font: this.font,
-      size: this.fontSize,
-      height: 0.001,
-      curveSegments: 3,
-    });
-    geometry.computeBoundingBox();
-    this.text = new Mesh(geometry, material);
-    this.text.position.x = -geometry.boundingBox.max.x / 2;
-    this.text.position.y = -geometry.boundingBox.max.y / 2;
+    // 使用textOutline替代TextGeometry和Mesh
+    this.text = createTextOutline(
+      this.name.toUpperCase(), 
+      this.font, 
+      {
+        size: this.fontSize,
+        height: 0,
+        threshold: 1  // 去除内部线条
+      }
+    );
+    
+    // 使用userData.bbox定位文本
+    this.text.position.x = -this.text.userData.bbox.max.x / 2;
+    this.text.position.y = -this.text.userData.bbox.max.y / 2;
     this.text.position.z = 0.01;
     this.buttonGroup.add(this.text);
   }
@@ -153,17 +154,29 @@ export default class Button {
   }
 
   setText(text) {
-    const geometry = new TextGeometry(text.toUpperCase(), {
-      font: this.font,
-      size: this.fontSize,
-      height: 0.001,
-      curveSegments: 3,
-    });
-    geometry.computeBoundingBox();
-    this.text.geometry = geometry;
-    this.text.position.x = -geometry.boundingBox.max.x / 2;
-    this.text.position.y = -geometry.boundingBox.max.y / 2;
+    // 移除旧的文本
+    if (this.text) {
+      this.buttonGroup.remove(this.text);
+      if (this.text.geometry) {
+        this.text.geometry.dispose();
+      }
+    }
+    
+    // 创建新的文本
+    this.text = createTextOutline(
+      text.toUpperCase(), 
+      this.font, 
+      {
+        size: this.fontSize,
+        height: 0,
+        threshold: 1
+      }
+    );
+    
+    this.text.position.x = -this.text.userData.bbox.max.x / 2;
+    this.text.position.y = -this.text.userData.bbox.max.y / 2;
     this.text.position.z = 0.01;
+    this.buttonGroup.add(this.text);
   }
 
   emit() {

@@ -8,12 +8,11 @@ import MobileDetect from 'mobile-detect';
 import Clipboard from 'clipboard';
 import bodymovin from 'bodymovin';
 import EventEmitter from 'event-emitter';
-import * as webvrui from './webvr-ui';
 import {
   EVENT, MODE, STATE, CONTROLMODE,
 } from './constants';
 import Scene from './scene';
-import Util from './webvr-manager/util';
+import XRUtil from './xr-util';
 import Communication from './communication';
 
 document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLock;
@@ -35,7 +34,7 @@ class PingPong {
     this.activeScreen = '.intro-screen';
     this.mobileDetect = new MobileDetect(window.navigator.userAgent);
 
-    if (Util.isMobile() && 'orientation' in window) {
+    if (XRUtil.isMobile() && 'orientation' in window) {
       this.checkPhoneOrientation();
     } else {
       this.startLoading();
@@ -119,60 +118,27 @@ class PingPong {
     }
   }
 
-  setupVRButton() {
-    const options = {
-      color: '#fff',
-      corners: 'square',
-    };
-    if (this.scene.display) {
-      ga('send', 'event', 'VR Display', 'custom', this.scene.display.displayName);
-    } else {
-      ga('send', 'event', 'VR Display', 'custom', 'No VR Display');
-    }
-    this.enterVRButton = new webvrui.EnterVRButton(this.scene.renderer.domElement, options);
-    document.getElementById('cardboard').appendChild(this.enterVRButton.domElement);
-    if (this.mobileDetect.tablet() && !(/OculusBrowser/.test(navigator.userAgent))) {
-      this.enterVRButton.disable();
-    }
-    this.enterVRButton.on('enter', () => {
-      ga('send', 'event', 'VR Mode', 'click', 'Enter VR Button');
-      TweenMax.set('.enter-vr, .mute, .reset-pose', {
-        display: 'none',
-        opacity: 0,
-      });
-      if (this.scene.config.state === STATE.PLAYING
-          || this.scene.config.state === STATE.GAME_OVER
-          || this.scene.config.state === STATE.COUNTDOWN
-          || this.scene.config.state === STATE.PAUSED) {
-        return;
-      }
-      TweenMax.to('.choose-vr-mode-screen', 0.4, {
-        autoAlpha: 0,
-      });
-      this.scene.setupVRControls();
-      this.scene.controlMode = CONTROLMODE.VR;
-      this.scene.startGame();
-      this.scene.onResize();
-      this.hideFullscreenButton();
-    });
-    this.enterVRButton.on('exit', () => {
-      TweenMax.set([this.scene.renderer, '.mute', 'canvas'], {
-        display: 'block',
-        visibility: 'visible',
-        opacity: 1,
-      });
-      this.hideFullscreenButton();
-      if (this.scene.display) {
-        TweenMax.set('.enter-vr', {
-          display: 'block',
-          opacity: 1,
-        });
-      }
-      if (Util.isMobile()) {
-        TweenMax.set('.reset-pose', {
-          display: 'block',
-          opacity: 1,
-        });
+  setupXRButton() {   
+    const button = document.createElement('button');
+    button.innerHTML = '进入XR';
+    button.style.position = 'absolute';
+    button.style.bottom = '20px';
+    button.style.left = '50%';
+    button.style.transform = 'translateX(-50%)';
+    button.style.display = 'none';
+    
+    document.getElementById('cardboard').appendChild(button);
+    
+    XRUtil.checkXRSupport().then(supported => {
+      if (supported) {
+        button.style.display = 'block';
+        button.onclick = () => {
+          this.scene.renderer.xr.getSession().then((session) => {
+            session.end();
+          }).catch(() => {
+            this.scene.renderer.xr.getSession();
+          });
+        };
       }
     });
   }
@@ -271,7 +237,11 @@ class PingPong {
     });
     this.emitter.on(EVENT.EXIT_BUTTON_PRESSED, () => {
       if (this.scene.renderer.xr.isPresenting) {
-        this.scene.renderer.xr.getSession();
+        this.scene.renderer.xr.getSession().then(session => {
+          session.end();
+        }).then(() => {
+          setTimeout(() => {location.reload();}, 3000);
+        });
       } else {
         location.reload();
       }
@@ -344,7 +314,7 @@ class PingPong {
     $('.about-screen .back-arrow').on('click', () => {this.backAnimation(this.activeScreen, true);});
     $('.mute').on('click', this.scene.sound.toggleMute.bind(this.scene.sound));
     $('input').on('focus', e => {
-      if (Util.isMobile()) {
+      if (XRUtil.isMobile()) {
         TweenMax.to(e.target, 0.3, {
           scale: 0.5,
         });
@@ -455,7 +425,7 @@ class PingPong {
   }
 
   onStartClick() {
-    if (Util.isMobile()) {
+    if (XRUtil.isMobile()) {
       const noSleep = new NoSleep();
       noSleep.enable();
     }
@@ -521,12 +491,10 @@ class PingPong {
   }
 
   onTiltClick() {
-    ga('send', 'event', 'VR Mode', 'click', 'Enter 360 Button');
-    if (Util.isMobile() || this.mobileDetect.tablet()) {
-      // eslint-disable-next-line
-      this.scene.manager.onFSClick_();
-      this.scene.setupVRControls();
-      this.scene.controlMode = CONTROLMODE.VR;
+    ga('send', 'event', 'XR Mode', 'click', 'Enter 360 Button');
+    if (XRUtil.isMobile() || this.mobileDetect.tablet()) {
+      this.scene.setupXRControls();
+      this.scene.controlMode = CONTROLMODE.XR;
     } else {
       this.scene.controlMode = CONTROLMODE.MOUSE;
     }

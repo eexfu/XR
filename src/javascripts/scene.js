@@ -22,15 +22,12 @@ import {
   MeshBasicMaterial,
   Color,
   Vector3,
-  Vector2,
   Euler,
   CatmullRomCurve3,
   TubeGeometry,
   Texture,
 } from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
-// import VREffect from './three/VREffect';
-// import VRControls from './three/VRControls';
 
 import {
 STATE, MODE, INITIAL_CONFIG, EVENT, CONTROLMODE
@@ -38,11 +35,10 @@ STATE, MODE, INITIAL_CONFIG, EVENT, CONTROLMODE
 import {
 cap, mirrorPosition, mirrorVelocity, setTransparency
 } from './util/helpers';
-import VR_MODES from './webvr-manager/modes';
 import Physics from './physics';
 import Hud from './hud';
 import SoundManager from './sound-manager';
-import Util from './webvr-manager/util';
+import XRUtil from './xr-util';
 import Time from './util/time';
 
 import Table from './models/table';
@@ -76,9 +72,9 @@ export default class Scene {
     this.renderer = null;
     this.scene = null;
     this.camera = null;
-    // three.js VRControls
+    // three.js Controls
     this.controls = null;
-    // three.js VREffect
+    // three.js Effect
     this.effect = null;
     // VR display
     this.display = null;
@@ -149,7 +145,7 @@ export default class Scene {
       x: 0,
       y: 0,
     };
-    this.isMobile = Util.isMobile();
+    this.isMobile = XRUtil.isMobile();
 
     // store fps for reducing image quality if too low
     this.fps = FPS({
@@ -181,7 +177,7 @@ export default class Scene {
       this.setupThree();
       console.log('renderer:', this.renderer);
       console.log('renderer.domElement:', this.renderer.domElement);
-      // this.setupVR();
+      this.setupXR();
       this.net = Net(this.scene, this.config);
 
       this.renderer.domElement.requestPointerLock
@@ -316,7 +312,7 @@ export default class Scene {
             this.renderer.shadowMap.enabled = false;
           }, 100);
         } else if (this.quality === 1) {
-          if (Util.isMobile() && this.manager.mode !== VR_MODES.VR) {
+          if (XRUtil.isMobile() && !this.renderer.xr.isPresenting) {
             // doing this when in VR may break everything and turn it black
             this.renderer.setPixelRatio(window.devicePixelRatio / 2);
           }
@@ -439,17 +435,35 @@ export default class Scene {
     }
   }
 
-  setupVRControls() {
-    // 使用XR控制器
+  setupXRControls() {
+    // 启用XR
+    this.renderer.xr.enabled = true;
+    
+    // 添加XR控制器
     const controller = this.renderer.xr.getController(0);
     this.scene.add(controller);
     
     controller.addEventListener('selectstart', () => {
       // 处理控制器选择事件
+      if (this.config.state === STATE.GAME_OVER) {
+        this.hud.message.click();
+      }
+    });
+
+    // 添加控制器移动事件监听
+    controller.addEventListener('move', (event) => {
+      if (this.config.state === STATE.PLAYING) {
+        const position = event.target.position;
+        this.paddle.position.set(
+          position.x,
+          this.config.tableHeight + 0.24,
+          position.z
+        );
+      }
     });
   }
 
-  setupVR() {
+  setupXR() {
     // 启用WebXR
   this.renderer.xr.enabled = true;
   
@@ -613,7 +627,7 @@ export default class Scene {
         width: $(this.renderer.domElement).width(),
         height: $(this.renderer.domElement).height(),
       };
-      if (Util.isMobile()) {
+      if (XRUtil.isMobile()) {
         gsap.set('.reset-pose', {
           display: 'block',
         });
@@ -632,8 +646,8 @@ export default class Scene {
       console.log('set paddle.visible');
       this.paddle.visible = true;
       this.hud.container.visible = true;
-      this.setupVRControls();
-      console.log('setupVRControls completed');
+      this.setupXRControls();
+      console.log('setupXRControls completed');
       if (this.config.mode === MODE.SINGLEPLAYER) {
         console.log('Singleplayer mode, countdown');
         this.countdown();
@@ -1024,8 +1038,20 @@ export default class Scene {
   }
 
   resetPose() {
-    if (this.display && this.display.resetPose) {
-      this.controls.resetPose();
+    if (this.renderer.xr.isPresenting) {
+      // 在XR模式下重置姿态
+      this.renderer.xr.getSession().then(session => {
+        if (session && session.requestReferenceSpace) {
+          session.requestReferenceSpace('local').then(referenceSpace => {
+            // 使用参考空间重置姿态
+            if (referenceSpace) {
+              // 重置相机位置
+              this.camera.position.set(0, 1.6, 0.6);
+              this.camera.rotation.set(0, 0, 0);
+            }
+          });
+        }
+      });
     }
   }
 
@@ -1050,18 +1076,7 @@ export default class Scene {
     if (pos) {
       this.ghostPaddlePosition.copy(pos);
     }
-    if (this.controls && this.controlMode === CONTROLMODE.VR) {
-      // Update VR headset position and apply to camera.
-      this.controls.update();
-      if (this.camera.position.x === 0
-        && this.camera.position.z === 0) {
-        // no position sensor in the device, put it behind the table
-        this.camera.position.z = 1;
-      }
-      if (this.daydream) {
-        this.camera.position.z = 1;
-      }
-    }
+    
     if (this.hitTween && this.hitTween.isActive()) {
       // interpolate between ball and paddle position during hit animation
       const newPos = new Vector3().lerpVectors(
@@ -1080,7 +1095,7 @@ export default class Scene {
   }
 
   updateCamera() {
-    if (this.display && this.controlMode !== CONTROLMODE.MOUSE) {
+    if (this.renderer.xr.isPresenting) {
       // user controls camera with headset in vr mode
       return;
     }
@@ -1117,37 +1132,34 @@ export default class Scene {
 
   computePaddlePosition() {
     let paddlePosition = null;
-    if (this.display && this.controlMode === CONTROLMODE.VR) {
-      let intersects = [];
-      // cardboard / vive / oculus / daydream
-      // intersect the table with where the camera is looking and place the
-      // paddle there. if we are in vr, position paddle below looking direction
-      // so we dont have to look down at all times
-      const rayYDirection = this.manager.mode === VR_MODES.VR ? -0.7 : -0.3;
-      this.raycaster.setFromCamera(new Vector2(0, rayYDirection), this.camera);
-      this.raycaster.far = 5;
-      intersects = this.raycaster.intersectObject(this.tablePlane, false);
-      if (intersects.length > 0) {
-        intersects[0].point.x *= 1.5;
-      }
-      if (intersects.length > 0) {
-        paddlePosition = intersects[0].point;
+    if (this.renderer.xr.isPresenting) {
+      // XR模式下的位置计算
+      const controller = this.renderer.xr.getController(0);
+      if (controller) {
+        const position = new Vector3();
+        controller.getWorldPosition(position);
+        paddlePosition = {
+          x: position.x,
+          y: this.config.tableHeight + 0.24,
+          z: position.z
+        };
       }
     } else if (this.pointerIsLocked) {
-      // mouse, locked pointer
+      // 鼠标锁定模式
       paddlePosition = {
         x: this.ghostPaddlePosition.x + 0.0015 * this.mouseMoveSinceLastFrame.x,
         y: this.config.tableHeight + 0.24,
         z: this.ghostPaddlePosition.z + 0.0015 * this.mouseMoveSinceLastFrame.y,
       };
     } else {
-      // mouse, unlocked pointer
+      // 普通鼠标模式
       paddlePosition = {
         x: 1.4 * this.mousePosition.x * this.config.tableWidth,
         y: this.config.tableHeight + 0.24,
         z: -this.config.tableDepth * 0.5 * (this.mousePosition.y + 0.5),
       };
     }
+    
     if (paddlePosition) {
       const x = cap(paddlePosition.x, this.config.tableWidth, -this.config.tableWidth);
       const z = cap(paddlePosition.z, this.config.tablePositionZ + 0.5, 0);
@@ -1427,10 +1439,6 @@ export default class Scene {
     //   requestAnimationFrame(this.animate.bind(this));
     // }
 
-    if (this.manager) {
-      this.manager.render(this.scene, this.camera, Date.now());
-    } else {
-      this.renderer.render(this.scene, this.camera);
-    }
+    this.renderer.render(this.scene, this.camera);
   }
 }

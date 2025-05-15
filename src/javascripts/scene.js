@@ -30,7 +30,7 @@ import {
 } from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 // import VREffect from './three/VREffect';
-import VRControls from './three/VRControls';
+// import VRControls from './three/VRControls';
 
 import {
 STATE, MODE, INITIAL_CONFIG, EVENT, CONTROLMODE
@@ -42,7 +42,6 @@ import VR_MODES from './webvr-manager/modes';
 import Physics from './physics';
 import Hud from './hud';
 import SoundManager from './sound-manager';
-import WebVRManager from './webvr-manager';
 import Util from './webvr-manager/util';
 import Time from './util/time';
 
@@ -247,8 +246,10 @@ export default class Scene {
       this.datShitCray = !this.datShitCray;
     });
     this.emitter.on(EVENT.EXIT_BUTTON_PRESSED, () => {
-      if (this.manager.mode === VR_MODES.VR) {
-        this.hud.message.setMessage('take off vr device');
+      if (this.renderer.xr.isPresenting) {
+        this.renderer.xr.getSession().then(session => {
+          session.end();
+        });
       }
     });
     this.emitter.on(EVENT.BALL_NET_COLLISION, () => {
@@ -273,6 +274,7 @@ export default class Scene {
       if (this.config.state !== STATE.GAME_OVER) {
         return;
       }
+      console.log('click', this.config.state);
       this.hud.message.click();
     });
 
@@ -438,40 +440,45 @@ export default class Scene {
   }
 
   setupVRControls() {
-    // apply VR headset positional data to camera.
-    this.controls = new VRControls(this.camera);
-    this.controls.standing = true;
-    this.controls.userHeight = this.config.cameraHeight;
+    // 使用XR控制器
+    const controller = this.renderer.xr.getController(0);
+    this.scene.add(controller);
+    
+    controller.addEventListener('selectstart', () => {
+      // 处理控制器选择事件
+    });
   }
 
   setupVR() {
-    // apply VR stereo rendering to renderer.
-    // this.effect = new VREffect(this.renderer);
-    // this.effect.setSize(window.innerWidth, window.innerHeight);
-
-    this.renderer.xr.enabled = true;
-
-    // create a VR manager helper to enter and exit VR mode.
-    const params = {
-      hideButton: false,
-      isUndistorted: false,
-    };
-    this.manager = new WebVRManager(this.renderer, this.effect, params);
-    // need the display for calling RAF on it instead of on window
-    navigator.getVRDisplays().then(displays => {
-      for (let i = 0; i < displays.length; i += 1) {
-        if (displays[i].capabilities.canPresent) {
-          this.display = displays[i];
-          if (this.display.displayName.indexOf('Daydream') !== -1) {
-            this.daydream = true;
-          }
-          break;
-        }
+    // 启用WebXR
+  this.renderer.xr.enabled = true;
+  
+  // 添加XR会话按钮
+  const button = document.createElement('button');
+  button.innerHTML = '进入VR';
+  button.style.position = 'absolute';
+  button.style.bottom = '20px';
+  button.style.left = '50%';
+  button.style.transform = 'translateX(-50%)';
+  button.style.display = 'none';
+  
+  document.body.appendChild(button);
+  
+  // 检查XR可用性
+  if ('xr' in navigator) {
+    navigator.xr.isSessionSupported('immersive-vr').then((supported) => {
+      if (supported) {
+        button.style.display = 'block';
+        button.onclick = () => {
+          this.renderer.xr.getSession().then((session) => {
+            session.end();
+          }).catch(() => {
+            this.renderer.xr.getSession();
+          });
+        };
       }
-    }).catch(e => {
-      console.warn('error getting vr displays:');
-      console.warn(e);
     });
+  }
   }
 
   setupThree() {
@@ -1315,9 +1322,10 @@ export default class Scene {
   }
 
   animate() {
-    // 使用 requestAnimationFrame 而不是 setAnimationLoop
-    requestAnimationFrame(this.animate.bind(this));
-    this.render();
+    // 使用XR的动画循环
+    this.renderer.setAnimationLoop(() => {
+      this.render();
+    });
   }
 
   render() {

@@ -205,6 +205,7 @@ export default class Button {
         this.emitter.emit(EVENT.RESTART_BUTTON_PRESSED);
         break;
       case 'exit':
+        console.log('exit');
         this.emitter.emit(EVENT.EXIT_BUTTON_PRESSED);
         break;
       case INITIAL_CONFIG.rainbowText:

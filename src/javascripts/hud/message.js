@@ -151,9 +151,11 @@ export default class Message {
   }
 
   click() {
+    console.log('click', this.intersectedButton);
     if (this.intersectedButton) {
       this.buttons[this.intersectedButton].emit();
       this.intersectedButton = null;
     }
+    console.log('click end', this.intersectedButton);
   }
 }

@@ -1,7 +1,7 @@
 import {Raycaster} from 'three';
 import {MODE, EVENT} from './constants';
 import {cap} from './util/helpers';
-import Util from './webvr-manager/util';
+import XRUtil from './xr-util';
 
 /* global CANNON */
 
@@ -18,7 +18,7 @@ export default class Physics {
     this.ballNetContact = null;
     this.ballPaddleContact = null;
     this.raycaster = new Raycaster();
-    this.isMobile = Util.isMobile();
+    this.isMobile = XRUtil.isMobile();
     this.speed = 1;
   }
 

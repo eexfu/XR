@@ -1,7 +1,7 @@
 import {
   MeshBasicMaterial, Mesh, Group, CircleGeometry, DoubleSide,
 } from 'three';
-import { createTextOutline } from '../util/textOutline.js';
+import { createTextWithOutline } from '../util/textOutline.js';
 import {MODE} from '../constants';
 
 export default class ScoreDisplay {
@@ -16,15 +16,21 @@ export default class ScoreDisplay {
 
   setupText() {
     // 创建分数显示，使用textOutline
-    this.opponentScore = createTextOutline('0', this.font, {
+    this.opponentScore = createTextWithOutline('0', this.font, {
       size: 0.35,
-      height: 0
+      fillColor: 0xffffff,
+      outlineColor: 0xffffff,
+      fillOpacity: 0.6,
+      outlineOpacity: 1.0
     });
     
     // 克隆不可行，所以要重新创建
-    this.selfScore = createTextOutline('0', this.font, {
+    this.selfScore = createTextWithOutline('0', this.font, {
       size: 0.35,
-      height: 0
+      fillColor: 0xffffff,
+      outlineColor: 0xffffff,
+      fillOpacity: 0.6,
+      outlineOpacity: 1.0
     });
 
     this.selfScore.rotation.y = Math.PI / 2;
@@ -67,9 +73,12 @@ export default class ScoreDisplay {
     this.parent.remove(this.selfScore);
     
     // 创建新的分数显示
-    this.selfScore = createTextOutline(`${value}`, this.font, {
+    this.selfScore = createTextWithOutline(`${value}`, this.font, {
       size: 0.35,
-      height: 0
+      fillColor: 0xffffff,
+      outlineColor: 0xffffff,
+      fillOpacity: 0.6,
+      outlineOpacity: 1.0
     });
     
     this.selfScore.rotation.y = Math.PI / 2;
@@ -88,9 +97,12 @@ export default class ScoreDisplay {
     this.parent.remove(this.opponentScore);
     
     // 创建新的分数显示
-    this.opponentScore = createTextOutline(`${value}`, this.font, {
+    this.opponentScore = createTextWithOutline(`${value}`, this.font, {
       size: 0.35,
-      height: 0
+      fillColor: 0xffffff,
+      outlineColor: 0xffffff,
+      fillOpacity: 0.6,
+      outlineOpacity: 1.0
     });
     
     this.opponentScore.rotation.y = -Math.PI / 2;
@@ -106,7 +118,7 @@ export default class ScoreDisplay {
 
   setLives(value) {
     this.lives.forEach((life, index) => {
-      life.material.opacity = value > index ? 1 : 0.3;
+      life.material.opacity = value > index ? 1 : 0.1;
     });
   }
 

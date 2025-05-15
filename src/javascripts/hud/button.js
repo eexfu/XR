@@ -7,7 +7,7 @@ import {
 } from 'three';
 import {Power0, TimelineMax} from 'gsap';
 import {EVENT, INITIAL_CONFIG} from '../constants';
-import { createTextOutline } from '../util/textOutline.js';
+import { createTextWithOutline } from '../util/textOutline.js';
 
 export default class Button {
   constructor(parent, font, name, x, y, emitter, width = 0.4, height = 0.2, borderWidth = 0.01, fontSize = 0.04) {
@@ -112,13 +112,15 @@ export default class Button {
 
   setupText() {
     // 使用textOutline替代TextGeometry和Mesh
-    this.text = createTextOutline(
+    this.text = createTextWithOutline(
       this.name.toUpperCase(), 
       this.font, 
       {
         size: this.fontSize,
-        height: 0,
-        threshold: 1  // 去除内部线条
+        fillColor: 0xffffff,
+        outlineColor: 0xffffff,
+        fillOpacity: 0.8,  // 按钮文字填充透明度稍高
+        outlineOpacity: 1.0
       }
     );
     
@@ -154,22 +156,37 @@ export default class Button {
   }
 
   setText(text) {
-    // 移除旧的文本
+    // 移除旧的文本对象
     if (this.text) {
       this.buttonGroup.remove(this.text);
-      if (this.text.geometry) {
+      
+      // 清理资源 - 关键是遍历子对象
+      if (this.text.type === 'Group') {
+        this.text.children.forEach(child => {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach(m => m.dispose());
+            } else {
+              child.material.dispose();
+            }
+          }
+        });
+      } else if (this.text.geometry) {
         this.text.geometry.dispose();
       }
     }
     
     // 创建新的文本
-    this.text = createTextOutline(
+    this.text = createTextWithOutline(
       text.toUpperCase(), 
       this.font, 
       {
         size: this.fontSize,
-        height: 0,
-        threshold: 1
+        fillColor: 0xffffff,
+        outlineColor: 0xffffff,
+        fillOpacity: 0.8,
+        outlineOpacity: 1.0
       }
     );
     

@@ -5,7 +5,7 @@ import {
 } from 'three';
 import $ from 'zepto-modules';
 import Button from './button';
-import { createTextOutline } from '../util/textOutline.js';
+import { createTextWithOutline } from '../util/textOutline.js';
 
 const CHAR_LIMIT = 16;
 const FONT_SIZE = 0.07;
@@ -44,16 +44,19 @@ export default class Message {
     let lineHeight = 0;
     splitText.forEach((split, index) => {
       // 使用createTextOutline代替TextGeometry和Mesh
-      const message = createTextOutline(
+      const message = createTextWithOutline(
         split, 
         font === 'Lato' ? this.font : this.antique, 
         {
           size: font === 'Lato' ? FONT_SIZE : 0.15,
-          height: 0
+          fillColor: 0xffffff,
+          outlineColor: 0xffffff,
+          fillOpacity: 0.6,
+          outlineOpacity: 1.0
         }
       );
       
-      // 使用textOutline中保存的边界框信息
+      // 使用userData.bbox定位文本
       message.position.x = -message.userData.bbox.max.x / 2;
       message.position.y = index * (message.userData.bbox.max.y + LINE_SPACING);
       this.messageGroup.add(message);
@@ -76,12 +79,15 @@ export default class Message {
       text = `${score.highest} ${score.highest === 1 ? 'PT' : 'PTS'}`;
     }
 
-    const gameOverText = createTextOutline(
+    const gameOverText = createTextWithOutline(
       text, 
       this.antique, 
       {
         size: FONT_SIZE * (multiplayer ? 2.5 : 3.5),
-        height: 0
+        fillColor: 0xffffff,
+        outlineColor: 0xffffff,
+        fillOpacity: 0.6,
+        outlineOpacity: 1.0
       }
     );
 
@@ -94,12 +100,15 @@ export default class Message {
     this.buttons.restart = new Button(this.messageGroup, this.font, 'restart', -0.25, buttonsYPosition, this.emitter);
 
     if (multiplayer) {
-      const scoreText = createTextOutline(
+      const scoreText = createTextWithOutline(
         `You: ${score.self} Opponent: ${score.opponent}`, 
         this.font, 
         {
           size: FONT_SIZE,
-          height: 0
+          fillColor: 0xffffff,
+          outlineColor: 0xffffff,
+          fillOpacity: 0.6,
+          outlineOpacity: 1.0
         }
       );
       scoreText.position.x = -scoreText.userData.bbox.max.x / 2;

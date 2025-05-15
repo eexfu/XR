@@ -493,9 +493,11 @@ class PingPong {
   onTiltClick() {
     ga('send', 'event', 'XR Mode', 'click', 'Enter 360 Button');
     if (XRUtil.isMobile() || this.mobileDetect.tablet()) {
+      console.log('切换到XR控制模式');
       this.scene.setupXRControls();
       this.scene.controlMode = CONTROLMODE.XR;
     } else {
+      console.log('切换到鼠标控制模式');
       this.scene.controlMode = CONTROLMODE.MOUSE;
     }
     this.scene.startGame();

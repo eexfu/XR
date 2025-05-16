@@ -53,6 +53,7 @@ export default class Hud {
         this.initialized = true;
 
         this.message = new Message(this.scene, this.config, this.font, this.antique, this.emitter);
+        console.log('message:', this.message);
         this.message.hideMessage();
 
         this.scoreDisplay = new ScoreDisplay(this.scene, this.config, this.font);

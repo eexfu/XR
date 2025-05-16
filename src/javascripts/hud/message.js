@@ -30,6 +30,8 @@ export default class Message {
     this.buttons[config.rainbowText] = new Button(this.crazyGroup, this.font, config.rainbowText, 0, 2, this.emitter, 0.7 * 100, 0.2 * 100, 0.01 * 100, 0.04 * 100);
     this.buttons[config.rainbowText].buttonGroup.position.z = 200;
     this.buttons[config.rainbowText].buttonGroup.rotation.y = Math.PI;
+    
+
   }
 
   setMessage(text, font = 'Lato') {

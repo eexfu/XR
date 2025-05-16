@@ -175,85 +175,108 @@ export default class Scene {
   }
 
   setup() {
-    return new Promise(resolve => {
-      this.setupThree();
-      console.log('renderer:', this.renderer);
-      console.log('renderer.domElement:', this.renderer.domElement);
-      
-      // WebXR的启用应尽早，但按钮由app.js中的VRButton负责
-      if (this.renderer) {
-        this.renderer.xr.enabled = true; 
-      } else {
-        console.error("Renderer not initialized before attempting to enable XR.");
-      }
+    return new Promise((resolve) => {
+      (async () => {
+        try {
+          // 1. 首先设置基础的 Three.js 组件
+          this.setupThree();
+          console.log('Three.js components initialized');
 
-      this.net = Net(this.scene, this.config);
+          // 2. 启用 WebXR
+          if (this.renderer) {
+            this.renderer.xr.enabled = true;
+          } else {
+            console.error("Renderer not initialized before attempting to enable XR.");
+            resolve('error');
+            return;
+          }
 
-      this.renderer.domElement.requestPointerLock =
-        this.renderer.domElement.requestPointerLock ||
-        this.renderer.domElement.mozRequestPointerLock;
+          // 3. 设置网格
+          this.net = Net(this.scene, this.config);
 
-      this.renderer.domElement.onclick = () => {
-        if (
-          this.config.state !== STATE.GAME_OVER &&
-          this.renderer.domElement.requestPointerLock
-        ) {
-          this.renderer.domElement.requestPointerLock();
-        }
-      };
+          // 4. 设置指针锁定
+          this.renderer.domElement.requestPointerLock =
+            this.renderer.domElement.requestPointerLock ||
+            this.renderer.domElement.mozRequestPointerLock;
 
-      this.physics.setupWorld();
+          this.renderer.domElement.onclick = () => {
+            if (
+              this.config.state !== STATE.GAME_OVER &&
+              this.renderer.domElement.requestPointerLock
+            ) {
+              this.renderer.domElement.requestPointerLock();
+            }
+          };
 
-      if (DEBUG_MODE) {
-        this.physicsDebugRenderer = new CannonDebugRenderer(
-          this.scene,
-          this.physics.world
-        );
-      }
+          // 5. 设置物理世界
+          this.physics.setupWorld();
 
-      this.setupEventListeners();
-      this.setupTablePlane();
-      this.setupLights();
-      this.setupEffects();
+          if (DEBUG_MODE) {
+            this.physicsDebugRenderer = new CannonDebugRenderer(
+              this.scene,
+              this.physics.world
+            );
+          }
 
-      this.hud = new Hud(
-        this.scene,
-        this.config,
-        this.emitter,
-        this.objLoader
-      );
-      try {
-        console.log('Creating crosshair...');  // 添加日志
-        this.crosshair = Crosshair(this.scene, this.config);
-        console.log('Crosshair created:', this.crosshair);  // 添加日志
-        this.crosshair.visible = false;
-      } catch (error) {
-        console.error('Error creating crosshair:', error);
-      }
+          // 6. 设置其他场景组件
+          this.setupEventListeners();
+          this.setupTablePlane();
+          this.setupLights();
+          this.setupEffects();
 
-      Promise.all([
-        setupPaddles(this.objLoader, this.config, this.scene),
-        this.hud.setup(),
-      ])
-        .then(([{ paddle, paddleOpponent }]) => {
+          // 7. 创建 HUD
+          this.hud = new Hud(
+            this.scene,
+            this.config,
+            this.emitter,
+            this.objLoader
+          );
+
+          // 8. 创建准星
+          try {
+            console.log('Creating crosshair...');
+            this.crosshair = Crosshair(this.scene, this.config);
+            console.log('Crosshair created:', this.crosshair);
+            this.crosshair.visible = false;
+          } catch (error) {
+            console.error('Error creating crosshair:', error);
+          }
+
+          // 9. 等待 HUD 设置和球拍设置完成
+          const [{ paddle, paddleOpponent }] = await Promise.all([
+            setupPaddles(this.objLoader, this.config, this.scene),
+            this.hud.setup().then(() => {
+              console.log('HUD setup complete, message:', this.hud.message);
+              return null;
+            })
+          ]);
+
+          // 10. 设置球拍位置
           this.paddle = paddle;
           this.paddleOpponent = paddleOpponent;
           this.paddle.position.copy(
             this.computePaddlePosition() || new Vector3()
           );
           this.ghostPaddlePosition.copy(this.paddle.position);
-          resolve('loaded');
-        })
-        .catch(e => {
-          console.warn('Loading error:');
-          console.warn(e);
-        });
 
-      if (this.renderer) {
-        this.renderer.setAnimationLoop(this.animate);
-      } else {
-        console.error("Renderer not initialized before setAnimationLoop in Scene.setup");
-      }
+          // 11. 只有在所有组件都准备好后才开始动画循环
+          if (this.renderer) {
+            console.log('Starting animation loop');
+            this.renderer.setAnimationLoop(this.animate);
+          } else {
+            console.error("Renderer not initialized before setAnimationLoop");
+          }
+
+          resolve('loaded');
+        } catch (error) {
+          console.error('Setup failed:', error);
+          // 即使发生错误也要 resolve，这样应用程序仍然可以继续运行
+          resolve('error');
+        }
+      })().catch(error => {
+        console.error('Unexpected setup error:', error);
+        resolve('error');
+      });
     });
   }
 
@@ -418,9 +441,7 @@ export default class Scene {
       if (isWithinRadius && isFaceHit) {
         console.log('Target Hit Detected in onBallTableCollision!');
         this.handleTargetHit();
-      } else {
-        // Hit the wall but not the target
-        console.log('Wall hit, but NOT target.');
+        // 击中目标时增加分数
         this.score.self += 1;
         this.hud.scoreDisplay.setSelfScore(this.score.self);
       }
@@ -1123,7 +1144,6 @@ export default class Scene {
     console.log('addBall called, state before:', this.config.state);
     this.config.state = STATE.PLAYING;
     console.log('addBall called, state after:', this.config.state);
-  // ...原有代码...
     if (this.ball) {
       this.ball.visible = true;
       this.physics.initBallPosition();
@@ -1370,6 +1390,11 @@ export default class Scene {
     }
     this.raycaster.setFromCamera(mouse, this.camera);
     this.raycaster.far = 400;
+    // 添加防御性检查
+    if (!this.hud || !this.hud.message) {
+      console.warn('hud/message 未初始化，无法在updateHudControls中执行');
+      return;
+    }
     this.hud.message.intersect(this.raycaster, this.controlMode === CONTROLMODE.MOUSE && !this.isMobile);
   }
 
@@ -1398,33 +1423,36 @@ export default class Scene {
   }
 
   animate(timestamp, frame) {
+    // 基础组件检查
     if (!this.renderer || !this.scene || !this.camera) {
-      console.warn('renderer/scene/camera 未初始化，无法在animate中执行');
+      console.warn('基础组件未初始化，无法在animate中执行');
+      return;
+    }
+
+    // HUD 组件检查 - 使用传统的检查方式
+    if (!this.hud || !this.hud.message) {
+      console.warn('HUD/message 未初始化，等待初始化完成');
       return;
     }
     
-    // 1. 计算 delta time (单位：秒)
-    // timestamp 通常是 performance.now() 返回的 DOMHighResTimeStamp (毫秒)
+    // 计算 delta time (单位：秒)
     const delta = (timestamp - (this.lastRenderTime || timestamp)) / 1000.0;
     this.lastRenderTime = timestamp;
 
     this.fps.tick();
 
+    // 球和球拍碰撞检测
     if (this.ball) {
       const dist = new Vector3();
       dist.subVectors(this.ball.position, this.paddle.position);
       let ballMovingTowardsPlayer = false;
+      
       if (this.renderer.xr.isPresenting && frame) {
-        // XR模式下，需要考虑头显（相机）的朝向来判断球是否朝向玩家
-        // 这是一个简化的判断，可能需要更精确的向量计算
         const cameraDirection = new Vector3();
         this.camera.getWorldDirection(cameraDirection);
-        // 如果球的Z速度和相机方向的Z分量符号相反（假设相机看向-Z），则认为球大致朝向玩家
-        // 或者更简单：判断球与球拍的相对Z位置和球的Z速度
-         ballMovingTowardsPlayer = this.physics.ball.velocity.z * (this.ball.position.z > this.paddle.position.z ? -1 : 1) > 0;
-
+        ballMovingTowardsPlayer = this.physics.ball.velocity.z * (this.ball.position.z > this.paddle.position.z ? -1 : 1) > 0;
       } else {
-         ballMovingTowardsPlayer = this.physics.ball.velocity.z > 0; // 假设非XR下，Z正方向是朝向玩家的
+        ballMovingTowardsPlayer = this.physics.ball.velocity.z > 0;
       }
 
       if (
@@ -1437,13 +1465,16 @@ export default class Scene {
       this.updateTrail();
     }
 
+    // 更新游戏状态
     if (this.config.state === STATE.PLAYING ||
         this.config.state === STATE.WAITING ||
         this.config.state === STATE.COUNTDOWN ||
         this.config.state === STATE.PAUSED ||
         this.config.state === STATE.INSTRUCTIONS ||
         this.config.state === STATE.GAME_OVER) {
-      this.updateControls(); // 更新控制器和相机（相机在非XR模式下由updateCamera处理）
+      
+      this.updateControls();
+      
       if (this.config.mode === MODE.MULTIPLAYER && this.config.state !== STATE.WAITING) {
         if (this.frameNumber % 5 === 0) {
           this.communication.sendMove(
@@ -1454,56 +1485,55 @@ export default class Scene {
       }
     }
 
+    // 更新物理
     if (this.config.state === STATE.PLAYING && this.tabActive) {
-      // physics.step 需要一个以秒为单位的时间差
-      // 如果 this.physicsTimeStep 是固定的更新频率（例如1000代表1秒更新一次物理），那么这里应该是固定的时间步长
-      // 或者如果 this.physicsTimeStep 是一个缩放因子，那么 delta / this.physicsTimeStep 是对的
-      // 假设 this.physicsTimeStep = 1000 意味着物理应该每秒模拟1000次 internal substeps，
-      // 或者说，你希望物理引擎内部使用 1/1000 秒的固定时间步。
-      // 如果是后者，并且你想让物理模拟追上真实时间，你需要多次调用 this.physics.step
-      // 但更常见的做法是：this.physics.step(delta); // 传递真实的delta时间（秒）
-      // 检查你的 Physics.js 中 step 方法是如何使用这个参数的
-      this.physics.step(delta / (this.physicsTimeStep / 1000.0)); // 假设 physicsTimeStep 是毫秒单位的期望间隔或因子
+      this.physics.step(delta / (this.physicsTimeStep / 1000.0));
       this.updateBall();
       this.physics.predictCollisions(this.scene.getObjectByName('net-collider'), delta);
     }
 
     this.updateHudControls();
 
-    if (DEBUG_MODE && this.physicsDebugRenderer) { // 确保 debug renderer 初始化了
+    if (DEBUG_MODE && this.physicsDebugRenderer) {
       this.physicsDebugRenderer.update();
     }
 
     if (this.tabActive && this.config.state !== STATE.PAUSED) {
-      this.time.step(); // 如果 this.time 依赖于 delta，需要传递
+      this.time.step();
     }
 
+    // 更新视觉效果
     if (this.datShitCray) {
-      this.table.getObjectByName('table-self').material.color.setHSL(this.hue, 1, 0.5);
-      const singleplayerTable = this.table.getObjectByName('table-self-singleplayer');
-      const opponentTable = this.table.getObjectByName('table-opponent');
-      if (singleplayerTable) {
-        singleplayerTable.material.color.setHSL(this.hue, 1, 0.5);
-      }
-      if (opponentTable) {
-        opponentTable.material.color.setHSL(this.hue, 1, 0.5);
-      }
-      this.paddle.getObjectByName('Cap_1').material.color.setHSL((this.hue + 0.25) % 1, 1, 0.5);
-      this.paddle.getObjectByName('Cap_2').material.color.setHSL((this.hue + 0.25) % 1, 1, 0.5);
-      if (this.ball) {
-        this.ball.material.color.setHSL((this.hue + 0.5) % 1, 1, 0.5);
-      }
-      const color = new Color();
-      color.setHSL((this.hue + 0.8) % 1, 1, 0.5);
-      this.renderer.setClearColor(color);
-      this.hue = (this.hue + delta / 2.0) % 1; // delta已经是秒了，所以除以2000变成除以2
+      this.updateCrazyMode(delta);
     }
 
     this.frameNumber += 1;
     this.mouseMoveSinceLastFrame.x = 0;
     this.mouseMoveSinceLastFrame.y = 0;
     
-    // --- 最终的渲染调用 ---
+    // 最终渲染
     this.renderer.render(this.scene, this.camera);
+  }
+
+  // 将疯狂模式的更新逻辑分离到单独的方法
+  updateCrazyMode(delta) {
+    this.table.getObjectByName('table-self').material.color.setHSL(this.hue, 1, 0.5);
+    const singleplayerTable = this.table.getObjectByName('table-self-singleplayer');
+    const opponentTable = this.table.getObjectByName('table-opponent');
+    if (singleplayerTable) {
+      singleplayerTable.material.color.setHSL(this.hue, 1, 0.5);
+    }
+    if (opponentTable) {
+      opponentTable.material.color.setHSL(this.hue, 1, 0.5);
+    }
+    this.paddle.getObjectByName('Cap_1').material.color.setHSL((this.hue + 0.25) % 1, 1, 0.5);
+    this.paddle.getObjectByName('Cap_2').material.color.setHSL((this.hue + 0.25) % 1, 1, 0.5);
+    if (this.ball) {
+      this.ball.material.color.setHSL((this.hue + 0.5) % 1, 1, 0.5);
+    }
+    const color = new Color();
+    color.setHSL((this.hue + 0.8) % 1, 1, 0.5);
+    this.renderer.setClearColor(color);
+    this.hue = (this.hue + delta / 2.0) % 1;
   }
 }

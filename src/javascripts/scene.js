@@ -411,39 +411,79 @@ export default class Scene {
     this.sound.table(ballBody.position, this.physics.ball.velocity);
 
     if (tablePartHit._name === 'upwards-table' && this.config.mode === MODE.SINGLEPLAYER) {
-      const contactPointOnTableLocal = contactData.ri;
-
-      // Recalculate targetRadius consistent with table.js (based on physics wall face area)
+      // 获取世界坐标系中的碰撞点
+      const worldPoint = new Vector3();
+      const contactPoint = contactData.bi.position.vadd(contactData.ri);
+      worldPoint.copy(contactPoint);
+      
+      // 将世界坐标转换为目标平面的局部坐标
+      const targetPlane = this.scene.getObjectByName('table-self-singleplayer');
+      if (!targetPlane) {
+        console.error('Target plane not found');
+        return;
+      }
+      
+      // 将世界坐标转换为目标平面的局部坐标
+      const localPoint = worldPoint.clone();
+      targetPlane.worldToLocal(localPoint);
+      
+      const contactNormalLocal = contactData.ni; // Normal in local coords of tablePartHit
+      
+      // 检查是否是正面击中（而不是擦边）
+      const isFaceHit = Math.abs(contactNormalLocal.z) > 0.8; // Threshold, closer to 1 is more direct face hit
+      
+      // 计算击中点与目标中心的距离
+      const targetVisualCenter = { x: 0, y: 0 };
+      const distanceFromTargetCenter = Math.sqrt(
+        Math.pow(localPoint.x - targetVisualCenter.x, 2) +
+        Math.pow(localPoint.y - targetVisualCenter.y, 2)
+      );
+      
+      // 计算目标区域半径
       const effectiveWallWidth = this.config.tableWidth;
       const effectiveWallHeight = this.config.tableHeight;
       const targetRadius = Math.sqrt((effectiveWallWidth * effectiveWallHeight) / (4 * Math.PI));
-      const targetVisualCenter = { x: 0, y: 0 };
-
-      const contactNormalLocal = contactData.ni; // Normal in local coords of tablePartHit
-      console.log('-- Wall Collision (Single Player) --');
-      console.log('Contact Local Coords (ri): x:', contactPointOnTableLocal.x.toFixed(3), 'y:', contactPointOnTableLocal.y.toFixed(3), 'z:', contactPointOnTableLocal.z.toFixed(3));
-      console.log('Contact Local Normal (ni): x:', contactNormalLocal.x.toFixed(3), 'y:', contactNormalLocal.y.toFixed(3), 'z:', contactNormalLocal.z.toFixed(3));
-      const isFaceHit = Math.abs(contactNormalLocal.z) > 0.8; // Threshold, closer to 1 is more direct face hit
-      console.log('Is Face Hit (Math.abs(contactNormalLocal.z) > 0.8)?', isFaceHit);
-
-      const distanceFromTargetCenter = Math.sqrt(
-        Math.pow(contactPointOnTableLocal.x - targetVisualCenter.x, 2) +
-        Math.pow(contactPointOnTableLocal.y - targetVisualCenter.y, 2)
-      );
-
-      // --- DEBUG LOGS START ---
-      console.log('Target Radius:', targetRadius.toFixed(3));
-      console.log('Distance from Target Center:', distanceFromTargetCenter.toFixed(3));
+      
+      // 判断是否击中目标区域
       const isWithinRadius = distanceFromTargetCenter < targetRadius;
-      console.log('Is Within Target Radius?', isWithinRadius);
-      // --- DEBUG LOGS END ---
-
+      
+      // 记录调试信息
+      console.log('-- Wall Collision Details --');
+      console.log('World Contact Point:', worldPoint);
+      console.log('Local Contact Point:', localPoint);
+      console.log('Is Face Hit:', isFaceHit);
+      console.log('Distance from Target:', distanceFromTargetCenter.toFixed(3));
+      console.log('Target Radius:', targetRadius.toFixed(3));
+      console.log('Is Within Target:', isWithinRadius);
+      
+      // 1. 首先，无论如何都加分
+      this.score.self += 1;
+      this.hud.scoreDisplay.setSelfScore(this.score.self);
+      
+      // 2. 判断是否击中目标区域并正面击中
       if (isWithinRadius && isFaceHit) {
-        console.log('Target Hit Detected in onBallTableCollision!');
+        console.log('✨ Target Hit! Processing life bonus...');
+        // 只有击中目标区域才处理生命值
         this.handleTargetHit();
-        // 击中目标时增加分数
-        this.score.self += 1;
-        this.hud.scoreDisplay.setSelfScore(this.score.self);
+        this.sound.playUI('target_hit');
+        
+        // 显示击中目标的提示
+        this.hud.message.setMessage('TARGET HIT!', 'antique');
+        this.hud.message.showMessage();
+        this.time.setTimeout(() => {
+          this.hud.message.hideMessage();
+        }, 800);
+      } else {
+        // 3. 如果只是击中了墙壁，播放普通音效
+        console.log('Regular wall hit');
+        this.sound.playUI('wall_hit');
+        
+        // 显示普通击中的提示
+        this.hud.message.setMessage('+1', 'antique');
+        this.hud.message.showMessage();
+        this.time.setTimeout(() => {
+          this.hud.message.hideMessage();
+        }, 500);
       }
     }
 
@@ -455,20 +495,24 @@ export default class Scene {
   handleTargetHit() {
     if (this.config.mode !== MODE.SINGLEPLAYER) return;
 
-    console.log('handleTargetHit CALLED');
-    console.log('Current lives BEFORE potentially adding:', this.score.lives);
-    console.log('Max lives (config.startLives):', this.config.startLives);
+    console.log('Processing target hit bonus...');
+    console.log('Current lives:', this.score.lives);
+    console.log('Max lives:', this.config.startLives);
 
+    // 只在生命值未满时处理
     if (this.score.lives < this.config.startLives) {
       this.score.lives += 1;
       this.hud.scoreDisplay.setLives(this.score.lives);
-      this.sound.playUI('target_hit'); // Placeholder for target hit sound
-      console.log('Life gained! Current lives AFTER:', this.score.lives);
-    } else {
-      this.sound.playUI('target_hit_full_lives'); // Optional: different sound if lives are full
-      console.log('Target Hit, but lives are full. Lives remain:', this.score.lives);
+      console.log('Life gained! New lives:', this.score.lives);
+      
+      // 显示获得生命的提示消息
+      const bonusMessage = this.score.lives === this.config.startLives ? 'MAX LIVES!' : 'LIFE +1!';
+      this.hud.message.setMessage(bonusMessage, 'antique');
+      this.hud.message.showMessage();
+      this.time.setTimeout(() => {
+        this.hud.message.hideMessage();
+      }, 1000);
     }
-    // Optional: Add some visual feedback for hitting the target
   }
 
   onGameOver() {

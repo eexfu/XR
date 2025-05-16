@@ -476,7 +476,9 @@ export default class Scene {
       } else {
         // 3. 如果只是击中了墙壁，播放普通音效
         console.log('Regular wall hit');
-        this.sound.playUI('wall_hit');
+        // 使用已有的 table 音效替代 wall_hit
+        const id = `table0${Math.floor(Math.random() * 3) + 1}`;
+        this.sound.playUI(id);
         
         // 显示普通击中的提示
         this.hud.message.setMessage('+1', 'antique');

@@ -380,17 +380,74 @@ export default class Scene {
     });
   }
 
-  onBallTableCollision(body, target) {
-    this.sound.table(body.position, this.physics.ball.velocity);
-    // eslint-disable-next-line
-    if (target._name === 'upwards-table' && this.config.mode === MODE.SINGLEPLAYER) {
-      this.score.self += 1;
-      this.hud.scoreDisplay.setSelfScore(this.score.self);
+  onBallTableCollision(eventData) {
+    const ballBody = eventData.body; // ball's physics body
+    const tablePartHit = eventData.target; // the part of the table that was hit (physics body)
+    const contactData = eventData.contact; // contact details
+
+    this.sound.table(ballBody.position, this.physics.ball.velocity);
+
+    if (tablePartHit._name === 'upwards-table' && this.config.mode === MODE.SINGLEPLAYER) {
+      const contactPointOnTableLocal = contactData.ri;
+
+      // Recalculate targetRadius consistent with table.js (based on physics wall face area)
+      const effectiveWallWidth = this.config.tableWidth;
+      const effectiveWallHeight = this.config.tableHeight;
+      const targetRadius = Math.sqrt((effectiveWallWidth * effectiveWallHeight) / (4 * Math.PI));
+      const targetVisualCenter = { x: 0, y: 0 };
+
+      const contactNormalLocal = contactData.ni; // Normal in local coords of tablePartHit
+      console.log('-- Wall Collision (Single Player) --');
+      console.log('Contact Local Coords (ri): x:', contactPointOnTableLocal.x.toFixed(3), 'y:', contactPointOnTableLocal.y.toFixed(3), 'z:', contactPointOnTableLocal.z.toFixed(3));
+      console.log('Contact Local Normal (ni): x:', contactNormalLocal.x.toFixed(3), 'y:', contactNormalLocal.y.toFixed(3), 'z:', contactNormalLocal.z.toFixed(3));
+      const isFaceHit = Math.abs(contactNormalLocal.z) > 0.8; // Threshold, closer to 1 is more direct face hit
+      console.log('Is Face Hit (Math.abs(contactNormalLocal.z) > 0.8)?', isFaceHit);
+
+      const distanceFromTargetCenter = Math.sqrt(
+        Math.pow(contactPointOnTableLocal.x - targetVisualCenter.x, 2) +
+        Math.pow(contactPointOnTableLocal.y - targetVisualCenter.y, 2)
+      );
+
+      // --- DEBUG LOGS START ---
+      console.log('Target Radius:', targetRadius.toFixed(3));
+      console.log('Distance from Target Center:', distanceFromTargetCenter.toFixed(3));
+      const isWithinRadius = distanceFromTargetCenter < targetRadius;
+      console.log('Is Within Target Radius?', isWithinRadius);
+      // --- DEBUG LOGS END ---
+
+      if (isWithinRadius && isFaceHit) {
+        console.log('Target Hit Detected in onBallTableCollision!');
+        this.handleTargetHit();
+      } else {
+        // Hit the wall but not the target
+        console.log('Wall hit, but NOT target.');
+        this.score.self += 1;
+        this.hud.scoreDisplay.setSelfScore(this.score.self);
+      }
     }
-    // eslint-disable-next-line
-    if (target._name === 'table-2-player' && body.position.z < this.config.tablePositionZ) {
+
+    if (tablePartHit._name === 'table-2-player' && ballBody.position.z < this.config.tablePositionZ) {
       this.ballHasHitEnemyTable = true;
     }
+  }
+
+  handleTargetHit() {
+    if (this.config.mode !== MODE.SINGLEPLAYER) return;
+
+    console.log('handleTargetHit CALLED');
+    console.log('Current lives BEFORE potentially adding:', this.score.lives);
+    console.log('Max lives (config.startLives):', this.config.startLives);
+
+    if (this.score.lives < this.config.startLives) {
+      this.score.lives += 1;
+      this.hud.scoreDisplay.setLives(this.score.lives);
+      this.sound.playUI('target_hit'); // Placeholder for target hit sound
+      console.log('Life gained! Current lives AFTER:', this.score.lives);
+    } else {
+      this.sound.playUI('target_hit_full_lives'); // Optional: different sound if lives are full
+      console.log('Target Hit, but lives are full. Lives remain:', this.score.lives);
+    }
+    // Optional: Add some visual feedback for hitting the target
   }
 
   onGameOver() {

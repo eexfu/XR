@@ -1,5 +1,5 @@
 import {
-  Group, BoxGeometry, Mesh, MeshLambertMaterial,
+  Group, BoxGeometry, Mesh, MeshLambertMaterial, CircleGeometry, DoubleSide,
 } from 'three';
 import {MODE} from '../constants';
 
@@ -65,6 +65,35 @@ export default (parent, config) => {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   upwardsTableGroup.add(mesh);
+
+  // START TARGET CODE
+  // Calculate target radius based on the area of the physics collision face (config.tableWidth * config.tableHeight)
+  const effectiveWallWidth = config.tableWidth;
+  const effectiveWallHeight = config.tableHeight; // Using physics body height dimension for consistency
+  const targetRadius = Math.sqrt((effectiveWallWidth * effectiveWallHeight) / (4 * Math.PI));
+
+  // const targetRadius = config.tableWidth * 0.1; // Old radius
+  const targetGeometry = new CircleGeometry(targetRadius, 32);
+  const targetMaterial = new MeshLambertMaterial({
+    color: 0xFFFF00, // Bright yellow
+    side: DoubleSide // Make sure it's visible from the direction of the player
+  });
+  const lifeTarget = new Mesh(targetGeometry, targetMaterial);
+
+  // Position the target on the surface of 'table-self-singleplayer'
+  lifeTarget.position.y = config.tableThickness / 2 + 0.005; // Slightly above the wall surface
+  lifeTarget.position.x = 0; // Centered horizontally
+  lifeTarget.position.z = 0; // Centered vertically on the wall (upwardsTableHeight)
+  
+  // Rotate the target to be flush with the wall face
+  // The CircleGeometry is in the XY plane by default. The upwardsTableGroup is rotated PI/2 on its X-axis.
+  // We want the circle to be in the XZ plane of the upwardsTableGroup so it faces the player after the group's rotation.
+  // So, we rotate the circle by PI/2 around its own X-axis.
+  lifeTarget.rotation.x = Math.PI / 2;
+
+  lifeTarget.name = 'target-life';
+  upwardsTableGroup.add(lifeTarget);
+  // END TARGET CODE
 
   group.add(upwardsTableGroup);
 

@@ -165,7 +165,7 @@ export default class Physics {
   }
 
   onBallTableCollision(e) {
-    this.emitter.emit(EVENT.BALL_TABLE_COLLISION, e.body, e.target);
+    this.emitter.emit(EVENT.BALL_TABLE_COLLISION, e);
   }
 
   setPaddlePosition(x, y, z) {

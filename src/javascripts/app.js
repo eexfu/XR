@@ -411,17 +411,10 @@ class PingPong {
       const noSleep = new NoSleep();
       noSleep.enable();
     }
-    this.activeScreen = '.choose-mode-screen';
     this.scene.sound.playLoop('bass-pad');
     this.scene.sound.playUI('transition');
     const tl = new TimelineMax();
-    tl.set('.choose-mode-screen h3, .choose-mode-screen svg, .buttons', {
-      opacity: 0,
-      y: 10,
-    });
     tl.set('.intro-screen', {zIndex: 10});
-    tl.set('.transition-color-screen', {zIndex: 11, left: '-100%'});
-    tl.set('.choose-mode-screen', {zIndex: 12});
     const width = $(window).width();
     tl.staggerTo([
       '.intro-screen h1',
@@ -435,41 +428,24 @@ class PingPong {
     tl.set('.intro-screen', {display: 'none'});
     tl.call(() => {
       if (this.introBallTween && typeof this.introBallTween.kill === 'function') {
-    this.introBallTween.kill();
-  }
+        this.introBallTween.kill();
+      }
       this.introOver = true;
+
+      // *** NEW CODE START ***
+      // Directly trigger single-player mode start after intro animation
+      // Call the relevant parts of onStartSingleplayerClick or the function itself
+      // This replicates the actions of onStartSingleplayerClick
+      $('.choose-vr-mode-screen').removeClass('blue green');
+      $('.choose-vr-mode-screen').addClass('pink');
+      $('.choose-vr-mode-screen a .before, .choose-vr-mode-screen #tilt .before').addClass('pink');
+      this.scene.setSingleplayer();
+      this.viewVRChooserScreen(); 
+      // Optionally, adjust activeScreen if needed, though viewVRChooserScreen might handle it
+      this.activeScreen = '.choose-vr-mode-screen'; // Or whatever screen viewVRChooserScreen transitions to
+
+      // *** NEW CODE END ***
     });
-    tl.staggerTo([
-      '.transition-color-screen.pink',
-      '.transition-color-screen.green',
-      '.choose-mode-screen',
-    ], screenTransitionDuration, {
-      left: '0%',
-      ease: screenTransitionEase,
-    }, screenTransitionInterval, `-=${screenTransitionDuration + screenTransitionInterval}`);
-    tl.set([
-      '.transition-color-screen.pink',
-      '.transition-color-screen.blue',
-      '.transition-color-screen.green',
-    ], {
-      left: '-100%',
-    });
-    tl.staggerTo([
-      '#singleplayer-animation svg',
-      '#multiplayer-animation svg',
-      '.one-player-col h3',
-      '.two-player-col h3',
-    ], 0.3, {
-      y: 0,
-      opacity: 1,
-    }, 0.1);
-    tl.staggerTo([
-      '.one-player-col .buttons',
-      '.two-player-col .buttons',
-    ], 0.3, {
-      y: 0,
-      opacity: 1,
-    }, 0.1, '+=0.2');
   }
 
   onTiltClick() {

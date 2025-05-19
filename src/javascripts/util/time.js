@@ -13,6 +13,15 @@ export default class Time {
   constructor() {
     this.timeouts = {};
     this.intervals = {};
+    this.lastTime = performance.now();
+    this.delta = 0;
+  }
+
+  getDelta() {
+    const currentTime = performance.now();
+    this.delta = (currentTime - this.lastTime) / 1000; // 转换为秒
+    this.lastTime = currentTime;
+    return this.delta;
   }
 
   setTimeout(callback, delay) {

@@ -598,7 +598,7 @@ export default class Scene {
     }
     
     // 添加XR控制器
-    const controller = this.renderer.xr.getController(0);
+    const controller = this.renderer.xr.getController(1);
     if (controller) {
       console.log('Controller found, adding to scene');
       this.scene.add(controller);
@@ -669,7 +669,7 @@ export default class Scene {
       this.controlMode = CONTROLMODE.VR;
       
       // 初始化控制器
-      const controller = this.renderer.xr.getController(0);
+      const controller = this.renderer.xr.getController(1);
       if (controller) {
         console.log('Adding controller to scene');
         this.scene.add(controller);
@@ -1358,7 +1358,7 @@ export default class Scene {
 
     if (this.renderer.xr.isPresenting) {
       // 获取手柄控制器
-      const controller = this.renderer.xr.getController(0);
+      const controller = this.renderer.xr.getController(1);
       if (controller) {
         // 获取手柄的世界位置
         const controllerPosition = new Vector3();
@@ -1588,7 +1588,7 @@ export default class Scene {
 
     // 在 VR 模式下更新球拍位置
     if (this.renderer.xr.isPresenting && this.controlMode === CONTROLMODE.VR) {
-      const controller = this.renderer.xr.getController(0);
+      const controller = this.renderer.xr.getController(1);
       if (controller && this.paddle) {
         const controllerPosition = new Vector3();
         controller.getWorldPosition(controllerPosition);

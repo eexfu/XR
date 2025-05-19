@@ -76,6 +76,7 @@
     "lodash.chunk": "^4.2.0",
     "mobile-detect": "^1.4.5",
     "morgan": "^1.10.0",
+    "ngrok": "^5.0.0-beta.2",
     "normalize.css": "^8.0.1",
     "nosleep": "^2.0.0",
     "open": "^8.4.2",

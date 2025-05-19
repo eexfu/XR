@@ -1,33 +1,11 @@
 import {
   gsap,
-  Power0,
-  Power2,
-  Power4,
-  Expo,
 } from 'gsap';
 import $ from 'zepto-modules';
 import FPS from 'fps';
-import {
-  Scene as ThreeScene,
-  WebGLRenderer,
-  TextureLoader,
-  BasicShadowMap,
-  SphereGeometry,
-  PerspectiveCamera,
-  DirectionalLight,
-  AmbientLight,
-  Raycaster,
-  PlaneGeometry,
-  Mesh,
-  MeshBasicMaterial,
-  Color,
-  Vector3,
-  Euler,
-  CatmullRomCurve3,
-  TubeGeometry,
-  Texture,
-} from 'three';
+import * as THREE from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
 
 import {
 STATE, MODE, INITIAL_CONFIG, EVENT, CONTROLMODE
@@ -78,7 +56,7 @@ export default class Scene {
     this.effect = null;
     // VR display
     this.display = null;
-    this.textureLoader = new TextureLoader();
+    this.textureLoader = new THREE.TextureLoader();
     this.textureLoader.setPath('/textures/');
     this.objLoader = new OBJLoader();
     this.objLoader.setPath('/models/');
@@ -126,7 +104,7 @@ export default class Scene {
     // we need this also for the hit animation. always stores where the paddle
     // is according to the controls, so we can interpolate between that and the
     // hit position
-    this.ghostPaddlePosition = new Vector3();
+    this.ghostPaddlePosition = new THREE.Vector3();
     // so the paddle doesn't repeatedly hit the ball during the animation
     this.hitAvailable = true;
     // for crazy mode
@@ -186,7 +164,7 @@ export default class Scene {
           if (this.renderer) {
             this.renderer.xr.enabled = true;
           } else {
-            console.error("Renderer not initialized before attempting to enable XR.");
+            console.error("Renderer not initialized before attempting to enable VR.");
             resolve('error');
             return;
           }
@@ -255,7 +233,7 @@ export default class Scene {
           this.paddle = paddle;
           this.paddleOpponent = paddleOpponent;
           this.paddle.position.copy(
-            this.computePaddlePosition() || new Vector3()
+            this.computePaddlePosition() || new THREE.Vector3()
           );
           this.ghostPaddlePosition.copy(this.paddle.position);
 
@@ -412,7 +390,7 @@ export default class Scene {
 
     if (tablePartHit._name === 'upwards-table' && this.config.mode === MODE.SINGLEPLAYER) {
       // 获取世界坐标系中的碰撞点
-      const worldPoint = new Vector3();
+      const worldPoint = new THREE.Vector3();
       const contactPoint = contactData.bi.position.vadd(contactData.ri);
       worldPoint.copy(contactPoint);
       
@@ -588,57 +566,56 @@ export default class Scene {
     }
   }
 
-  setupXRControls() {
-    // 启用XR (如果尚未启用)
-    if (this.renderer && !this.renderer.xr.enabled) {
-        this.renderer.xr.enabled = true;
-    }
+  setupThree() {
+    this.renderer = new THREE.WebGLRenderer({antialias: true});
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setPixelRatio(window.devicePixelRatio);
+    this.renderer.shadowMap.enabled = true;
     
-    // 添加XR控制器
-    // 注意：VRButton成功进入XR会话后，控制器才会真正可用
-    const controller = this.renderer.xr.getController(0);
-    this.scene.add(controller);
+    // 启用VR
+    this.renderer.xr.enabled = true;
+    document.body.appendChild(VRButton.createButton(this.renderer));
     
-    controller.addEventListener('selectstart', () => {
-      // 处理控制器选择事件
-      if (this.config.state === STATE.GAME_OVER) {
-        this.hud.message.click();
+    // 设置相机
+    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    this.camera.position.set(0, 1.6, 0.6); // 调整到VR视角高度
+    
+    // 创建控制器
+    this.controller1 = this.renderer.xr.getController(0);
+    this.controller2 = this.renderer.xr.getController(1);
+    this.scene.add(this.controller1);
+    this.scene.add(this.controller2);
+    
+    // 添加控制器事件监听
+    this.controller1.addEventListener('selectstart', () => {
+      if (this.config.state === STATE.PLAYING) {
+        this.handleControllerInteraction(this.controller1);
+      }
+    });
+    
+    this.controller2.addEventListener('selectstart', () => {
+      if (this.config.state === STATE.PLAYING) {
+        this.handleControllerInteraction(this.controller2);
       }
     });
 
-    // 添加控制器移动事件监听
-    // 这个事件监听器通常在XR会话激活后才会有效工作
-    // controller.addEventListener('move', (event) => { // 'move' 事件可能不是所有控制器都支持或以这种方式触发
-    //   if (this.config.state === STATE.PLAYING && this.renderer.xr.isPresenting) { // 确保在XR模式下
-    //     // paddle的更新应该在render循环的updateControls中进行，而不是直接在这里
-    //     // this.paddle.position.set(
-    //     //   event.target.position.x,
-    //     //   this.config.tableHeight + 0.24,
-    //     //   event.target.position.z
-    //     // );
-    //   }
-    // });
+    this.scene = new THREE.Scene();
   }
 
-  setupThree() {
-    this.renderer = new WebGLRenderer({antialias: true});
-    this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = BasicShadowMap;
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-
-    document.body.appendChild(this.renderer.domElement);
-
-    this.scene = new ThreeScene();
-    this.camera = new PerspectiveCamera(47, window.innerWidth / window.innerHeight, 0.1, 10000);
-
-    this.camera.position.x = 0;
-    this.camera.position.y = 1.6;
-    this.camera.position.z = 0.6;
+  handleControllerInteraction(controller) {
+    // 处理控制器交互
+    const position = new THREE.Vector3();
+    controller.getWorldPosition(position);
+    
+    // 更新球拍位置
+    if (this.paddle) {
+      this.paddle.position.copy(position);
+      this.paddle.position.y = 1.0; // 保持球拍在合适的高度
+    }
   }
 
   setupLights() {
-    this.light = new DirectionalLight(0xffffff, 0.3, 0);
+    this.light = new THREE.DirectionalLight(0xffffff, 0.3, 0);
     this.light.position.z = this.config.tablePositionZ;
     this.light.position.z = 2;
     this.light.position.y = 4;
@@ -653,14 +630,14 @@ export default class Scene {
     this.light.shadow.mapSize.height = (this.isMobile ? 1 : 8) * 512;
     this.scene.add(this.light);
 
-    this.scene.add(new AmbientLight(0xFFFFFF, 0.9));
+    this.scene.add(new THREE.AmbientLight(0xFFFFFF, 0.9));
   }
 
   setupTablePlane() {
-    this.raycaster = new Raycaster();
-    const geometry = new PlaneGeometry(40, 40, 5, 5);
-    const material = new MeshBasicMaterial({color: 0xffff00, wireframe: true});
-    this.tablePlane = new Mesh(geometry, material);
+    this.raycaster = new THREE.Raycaster();
+    const geometry = new THREE.PlaneGeometry(40, 40, 5, 5);
+    const material = new THREE.MeshBasicMaterial({color: 0xffff00, wireframe: true});
+    this.tablePlane = new THREE.Mesh(geometry, material);
     this.tablePlane.rotation.x = -Math.PI * 0.45;
     this.tablePlane.position.y = this.config.tableHeight + 0.2;
     this.tablePlane.position.z = this.config.tablePositionZ + this.config.tableDepth / 2;
@@ -670,22 +647,22 @@ export default class Scene {
   }
 
   setupEffects() {
-    let geometry = new SphereGeometry(0.3, 32, 32);
-    let material = new MeshBasicMaterial({
+    let geometry = new THREE.SphereGeometry(0.3, 32, 32);
+    let material = new THREE.MeshBasicMaterial({
       color: 0xffffff,
       transparent: true,
       depthTest: false,
       depthWrite: false,
     });
-    this.halo = new Mesh(geometry, material);
+    this.halo = new THREE.Mesh(geometry, material);
     this.halo.position.z = 10;
     this.scene.add(this.halo);
     this.halo.scale.x = 0.001;
     this.halo.scale.y = 0.001;
     this.halo.scale.z = 0.001;
 
-    this.ballPath = new CatmullRomCurve3([new Vector3(0, 0, 0), new Vector3(0, 0.1, 0)]);
-    geometry = new TubeGeometry(this.ballPath, 30, 0.01, 8, false);
+    this.ballPath = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0.1, 0)]);
+    geometry = new THREE.TubeGeometry(this.ballPath, 30, 0.01, 8, false);
 
     if (this.trailEnabled) {
       // create a gradient texture on canvas and apply it on material
@@ -699,14 +676,14 @@ export default class Scene {
       gradient.addColorStop(1, 'rgba(249, 252, 86, 0.3)');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, 512, 512);
-      const trailTexture = new Texture(canvas);
+      const trailTexture = new THREE.Texture(canvas);
       trailTexture.needsUpdate = true;
 
-      material = new MeshBasicMaterial({
+      material = new THREE.MeshBasicMaterial({
         map: trailTexture,
         transparent: true,
       });
-      this.trail = new Mesh(geometry, material);
+      this.trail = new THREE.Mesh(geometry, material);
       this.scene.add(this.trail);
       this.ballPath = null;
     }
@@ -802,9 +779,9 @@ export default class Scene {
     return new Promise(resolve => {
       const tl = new gsap.timeline();
       this.camera.lookAt(
-        new Vector3().lerpVectors(
+        new THREE.Vector3().lerpVectors(
           this.ghostPaddlePosition,
-          new Vector3(
+          new THREE.Vector3(
             this.table.position.x,
             this.config.tableHeight + 0.3,
             this.table.position.z
@@ -1013,14 +990,14 @@ export default class Scene {
       // of this players ball due to changes in latency. save the difference and
       // interpolate it until the ball is at our side again. this way the user
       // shouldnt notice any hard position changes
-      this.ballPositionDifference = new Vector3().subVectors(
+      this.ballPositionDifference = new THREE.Vector3().subVectors(
         this.physics.ball.position,
         mirrorPosition(data.point, this.config.tablePositionZ)
       );
       this.ballInterpolationAlpha = 1;
       gsap.to(this, {
         duration: 0.5,
-        ease: Power0.easeNone,
+        ease: 'power0.easeNone',
         ballInterpolationAlpha: 0,
       });
       this.physics.increaseSpeed();
@@ -1084,7 +1061,7 @@ export default class Scene {
       return;
     }
     const velocity = this.physics.ball.velocity.length();
-    const dist = new Vector3().subVectors(this.ball.position, this.paddleOpponent.position).length();
+    const dist = new THREE.Vector3().subVectors(this.ball.position, this.paddleOpponent.position).length();
     const eta = dist / velocity;
     const desirableEta = eta + (this.communication.latency / 1000);
     this.physicsTimeStep = 1000 * (desirableEta / eta) * 1;
@@ -1170,7 +1147,7 @@ export default class Scene {
 
   resetPose() {
     if (this.renderer.xr.isPresenting) {
-      // 在XR模式下重置姿态
+      // 在VR模式下重置姿态
       this.renderer.xr.getSession().then(session => {
         if (session && session.requestReferenceSpace) {
           session.requestReferenceSpace('local').then(referenceSpace => {
@@ -1209,7 +1186,7 @@ export default class Scene {
     
     if (this.hitTween && this.hitTween.isActive()) {
       // interpolate between ball and paddle position during hit animation
-      const newPos = new Vector3().lerpVectors(
+      const newPos = new THREE.Vector3().lerpVectors(
         pos,
         this.lastHitPosition,
         this.paddleInterpolationAlpha
@@ -1230,13 +1207,13 @@ export default class Scene {
       return;
     }
     // backup original rotation
-    const startRotation = new Euler().copy(this.camera.rotation);
+    const startRotation = new THREE.Euler().copy(this.camera.rotation);
 
     // look at the point at the middle position between the table center and paddle
     this.camera.lookAt(
-      new Vector3().lerpVectors(
+      new THREE.Vector3().lerpVectors(
         this.ghostPaddlePosition,
-        new Vector3(
+        new THREE.Vector3(
           this.table.position.x,
           this.config.tableHeight + 0.3,
           this.table.position.z
@@ -1245,7 +1222,7 @@ export default class Scene {
       )
     );
     // the rotation we want to end up with
-    const endRotation = new Euler().copy(this.camera.rotation);
+    const endRotation = new THREE.Euler().copy(this.camera.rotation);
     // revert to original rotation and then we can tween it
     this.camera.rotation.copy(startRotation);
     if (this.cameraTween) {
@@ -1256,47 +1233,28 @@ export default class Scene {
       x: endRotation.x,
       y: endRotation.y,
       z: endRotation.z,
-      ease: Power4.easeOut,
+      ease: 'power4.out',
     });
   }
 
   computePaddlePosition() {
-    let paddlePositionVec = new Vector3(); // 使用Vector3以方便后续操作
+    let paddlePositionVec = new THREE.Vector3(); // 使用Vector3以方便后续操作
 
     if (this.renderer.xr.isPresenting) {
-      const controller = this.renderer.xr.getController(0); // 获取主控制器
-      if (controller) {
-        // 获取控制器的世界位置
-        controller.getWorldPosition(paddlePositionVec);
-        // 根据需要调整Y轴和可能的偏移
-        // 注意：直接使用控制器位置可能需要根据乒乓球桌的实际位置和玩家期望的握拍方式进行调整
-        // 例如，你可能需要将控制器的位置映射到球桌的相对坐标系中
-        paddlePositionVec.y = this.config.tableHeight + 0.1; // 示例：稍微高于桌面
-        // Z轴可能也需要根据球桌的tablePositionZ进行偏移
-        // paddlePositionVec.z += this.config.tablePositionZ; // 这取决于你的坐标系设置
+      // 在VR模式下使用控制器位置
+      if (this.controller1) {
+        this.controller1.getWorldPosition(paddlePositionVec);
       }
-    } else if (this.pointerIsLocked) {
-      paddlePositionVec.set(
-        this.ghostPaddlePosition.x + 0.0015 * this.mouseMoveSinceLastFrame.x,
-        this.config.tableHeight + 0.24, // 或者一个基于ghostPaddlePosition.y的计算值
-        this.ghostPaddlePosition.z + 0.0015 * this.mouseMoveSinceLastFrame.y
-      );
     } else {
+      // 非VR模式下的原有逻辑
       paddlePositionVec.set(
-        1.4 * this.mousePosition.x * this.config.tableWidth,
-        this.config.tableHeight + 0.24,
-        -this.config.tableDepth * 0.5 * (this.mousePosition.y + 0.5)
+        this.paddle.position.x,
+        this.paddle.position.y,
+        this.paddle.position.z
       );
     }
-    
-    // 应用边界限制
-    const x = cap(paddlePositionVec.x, this.config.tableWidth / 2, -this.config.tableWidth / 2); // 假设tableWidth是总宽度
-    const zMax = this.config.tablePositionZ + this.config.tableDepth / 2; // 球桌远端
-    const zMin = this.config.tablePositionZ - this.config.tableDepth / 2 + 0.1; // 球桌近端加一点偏移，防止穿模
-    const z = cap(paddlePositionVec.z, zMax, zMin); 
-    const y = paddlePositionVec.y; // Y值可能需要更复杂的逻辑，比如基于Z值倾斜等
 
-    return new Vector3(x, y, z); // 返回Vector3
+    return paddlePositionVec;
   }
 
   computePaddleRotation(pos) {
@@ -1311,9 +1269,9 @@ export default class Scene {
     if (this.ballPositionDifference) {
       // we interpolate between the actual (received) position and the position
       // the user would expect. after 500ms both positions are the same.
-      const fauxPosition = new Vector3().lerpVectors(
+      const fauxPosition = new THREE.Vector3().lerpVectors(
         this.physics.ball.position,
-        new Vector3().addVectors(
+        new THREE.Vector3().addVectors(
           this.physics.ball.position,
           this.ballPositionDifference
         ),
@@ -1337,10 +1295,10 @@ export default class Scene {
       this.lastHitPosition.y = Math.max(this.lastHitPosition.y, this.config.tableHeight + 0.2);
       this.hitTween.to(this, 0.05, {
         paddleInterpolationAlpha: 1,
-        ease: Power2.easeIn,
+        ease: 'power2.in',
       });
       this.hitTween.to(this, 0.4, {
-        ease: Power2.easeOut,
+        ease: 'power2.out',
         paddleInterpolationAlpha: 0,
       });
     }
@@ -1363,26 +1321,26 @@ export default class Scene {
       x: 1,
       y: 1,
       z: 1,
-      ease: Expo.easeOut,
+      ease: 'expo.out',
     });
   }
 
   tableBlinkAnimation(side) {
     const table = this.scene.getObjectByName(side);
     if (!table) return;
-    const brightenedColor = `#${table.material.color.clone().lerp(new Color(0xffffff), 0.5).getHexString()}`;
+    const brightenedColor = `#${table.material.color.clone().lerp(new THREE.Color(0xffffff), 0.5).getHexString()}`;
     const no = {
       color: `#${table.material.color.getHexString()}`,
     };
-    const BLUE_TABLE = `#${new Color(this.config.colors.BLUE_TABLE).getHexString()}`;
-    const GREEN_TABLE = `#${new Color(this.config.colors.GREEN_TABLE).getHexString()}`;
+    const BLUE_TABLE = `#${new THREE.Color(this.config.colors.BLUE_TABLE).getHexString()}`;
+    const GREEN_TABLE = `#${new THREE.Color(this.config.colors.GREEN_TABLE).getHexString()}`;
     const to = this.communication.isHost ? BLUE_TABLE : GREEN_TABLE;
     gsap.fromTo(no, {
       color: brightenedColor,
     }, {
       duration: 0.8,
       color: to,
-      ease: Power4.easeOut,
+      ease: 'power4.out',
       onUpdate: () => {
         table.material.color.set(no.color);
       },
@@ -1416,7 +1374,7 @@ export default class Scene {
     // raycaster wants mouse from -1 to 1, not -0.5 to 0.5 like mousePosition is normalized
     let mouse = {};
     if (this.controlMode === CONTROLMODE.VR || this.isMobile) {
-      const zCamVec = new Vector3(0, 0, -1);
+      const zCamVec = new THREE.Vector3(0, 0, -1);
       const position = this.camera.localToWorld(zCamVec);
       this.crosshair.position.set(position.x, position.y, position.z);
       if (position.z > 1) {
@@ -1450,9 +1408,9 @@ export default class Scene {
     }
     // the points array is a first in first out queue
     if (!this.ballPath) {
-      this.ballPath = new CatmullRomCurve3([
+      this.ballPath = new THREE.CatmullRomCurve3([
         this.ball.position.clone(),
-        new Vector3(
+        new THREE.Vector3(
           this.ball.position.x,
           this.ball.position.y,
           this.ball.position.z + 0.001
@@ -1465,53 +1423,17 @@ export default class Scene {
       this.ballPath.points.shift();
     }
     this.trail.geometry.dispose();
-    this.trail.geometry = new TubeGeometry(this.ballPath, 8, 0.01, 8, false);
+    this.trail.geometry = new THREE.TubeGeometry(this.ballPath, 8, 0.01, 8, false);
   }
 
-  animate(timestamp, frame) {
-    // 基础组件检查
+  animate() {
     if (!this.renderer || !this.scene || !this.camera) {
-      console.warn('基础组件未初始化，无法在animate中执行');
+      console.error('Essential components not initialized');
       return;
     }
 
-    // HUD 组件检查 - 使用传统的检查方式
-    if (!this.hud || !this.hud.message) {
-      console.warn('HUD/message 未初始化，等待初始化完成');
-      return;
-    }
-    
-    // 计算 delta time (单位：秒)
-    const delta = (timestamp - (this.lastRenderTime || timestamp)) / 1000.0;
-    this.lastRenderTime = timestamp;
+    const delta = this.time.getDelta();
 
-    this.fps.tick();
-
-    // 球和球拍碰撞检测
-    if (this.ball) {
-      const dist = new Vector3();
-      dist.subVectors(this.ball.position, this.paddle.position);
-      let ballMovingTowardsPlayer = false;
-      
-      if (this.renderer.xr.isPresenting && frame) {
-        const cameraDirection = new Vector3();
-        this.camera.getWorldDirection(cameraDirection);
-        ballMovingTowardsPlayer = this.physics.ball.velocity.z * (this.ball.position.z > this.paddle.position.z ? -1 : 1) > 0;
-      } else {
-        ballMovingTowardsPlayer = this.physics.ball.velocity.z > 0;
-      }
-
-      if (
-        (dist.length() < 0.4 && Math.abs(dist.x) < 0.2 && Math.abs(dist.z) < 0.1 ||
-         this.isMobile && dist.length() < 0.4 && Math.abs(dist.x) < 0.3 && Math.abs(dist.z) < 0.1) &&
-        ballMovingTowardsPlayer 
-      ) {
-        this.onBallPaddleCollision(this.ball.position);
-      }
-      this.updateTrail();
-    }
-
-    // 更新游戏状态
     if (this.config.state === STATE.PLAYING ||
         this.config.state === STATE.WAITING ||
         this.config.state === STATE.COUNTDOWN ||
@@ -1519,7 +1441,28 @@ export default class Scene {
         this.config.state === STATE.INSTRUCTIONS ||
         this.config.state === STATE.GAME_OVER) {
       
-      this.updateControls();
+      // 更新控制器位置
+      if (this.renderer.xr.isPresenting) {
+        // VR模式下的控制器更新
+        const gamepad = navigator.getGamepads()[0];
+        if (gamepad) {
+          // 使用游戏手柄数据更新球拍位置
+          const position = new THREE.Vector3(
+            gamepad.axes[0] * this.config.tableWidth / 2,
+            this.config.tableHeight + 0.24,
+            gamepad.axes[1] * this.config.tableDepth / 2
+          );
+          this.paddle.position.copy(position);
+          
+          // 检查触发器按钮
+          if (gamepad.buttons[0].pressed && this.config.state === STATE.PLAYING) {
+            this.onPaddleHit();
+          }
+        }
+      } else {
+        // 非VR模式下的控制器更新
+        this.updateControls();
+      }
       
       if (this.config.mode === MODE.MULTIPLAYER && this.config.state !== STATE.WAITING) {
         if (this.frameNumber % 5 === 0) {
@@ -1557,7 +1500,7 @@ export default class Scene {
     this.mouseMoveSinceLastFrame.x = 0;
     this.mouseMoveSinceLastFrame.y = 0;
     
-    // 最终渲染
+    // 渲染场景
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -1577,9 +1520,25 @@ export default class Scene {
     if (this.ball) {
       this.ball.material.color.setHSL((this.hue + 0.5) % 1, 1, 0.5);
     }
-    const color = new Color();
+    const color = new THREE.Color();
     color.setHSL((this.hue + 0.8) % 1, 1, 0.5);
     this.renderer.setClearColor(color);
     this.hue = (this.hue + delta / 2.0) % 1;
+  }
+
+  showVRNotSupportedMessage(message) {
+    const vrMessage = document.createElement('div');
+    vrMessage.style.position = 'absolute';
+    vrMessage.style.bottom = '20px';
+    vrMessage.style.left = '50%';
+    vrMessage.style.transform = 'translateX(-50%)';
+    vrMessage.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
+    vrMessage.style.color = 'white';
+    vrMessage.style.padding = '10px';
+    vrMessage.style.borderRadius = '5px';
+    vrMessage.style.fontFamily = 'Arial, sans-serif';
+    vrMessage.style.textAlign = 'center';
+    vrMessage.textContent = message;
+    document.body.appendChild(vrMessage);
   }
 }

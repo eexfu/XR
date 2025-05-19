@@ -1,5 +1,6 @@
 import {
   Group, BoxGeometry, Mesh, MeshLambertMaterial, CircleGeometry, DoubleSide,
+  TextureLoader
 } from 'three';
 import {MODE} from '../constants';
 
@@ -72,25 +73,39 @@ export default (parent, config) => {
   const effectiveWallHeight = config.tableHeight; // Using physics body height dimension for consistency
   const targetRadius = Math.sqrt((effectiveWallWidth * effectiveWallHeight) / (4 * Math.PI));
 
-  // const targetRadius = config.tableWidth * 0.1; // Old radius
   const targetGeometry = new CircleGeometry(targetRadius, 32);
+  
+  // Create texture loader
+  const textureLoader = new TextureLoader();
+  // Create a default material first (will be updated when texture loads)
   const targetMaterial = new MeshLambertMaterial({
-    color: 0xFFFF00, // Bright yellow
-    side: DoubleSide // Make sure it's visible from the direction of the player
+    color: 0xFFFF00,
+    side: DoubleSide,
+    transparent: true
   });
+  
   const lifeTarget = new Mesh(targetGeometry, targetMaterial);
+
+  // Load and apply custom texture
+  textureLoader.load(
+    '/images/target.png',
+    (texture) => {
+      targetMaterial.map = texture;
+      targetMaterial.color.setHex(0xFFFFFF); // Reset to white to show texture properly
+      targetMaterial.needsUpdate = true;
+    },
+    undefined,
+    (error) => {
+      console.error('Error loading target texture:', error);
+    }
+  );
 
   // Position the target on the surface of 'table-self-singleplayer'
   lifeTarget.position.y = config.tableThickness / 2 + 0.005; // Slightly above the wall surface
   lifeTarget.position.x = 0; // Centered horizontally
-  lifeTarget.position.z = 0; // Centered vertically on the wall (upwardsTableHeight)
+  lifeTarget.position.z = 0; // Centered vertically on the wall
   
-  // Rotate the target to be flush with the wall face
-  // The CircleGeometry is in the XY plane by default. The upwardsTableGroup is rotated PI/2 on its X-axis.
-  // We want the circle to be in the XZ plane of the upwardsTableGroup so it faces the player after the group's rotation.
-  // So, we rotate the circle by PI/2 around its own X-axis.
   lifeTarget.rotation.x = Math.PI / 2;
-
   lifeTarget.name = 'target-life';
   upwardsTableGroup.add(lifeTarget);
   // END TARGET CODE

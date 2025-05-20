@@ -6,15 +6,18 @@
 
 ---
 
-## Features
+## Unique Gameplay & Features
 
-- WebXR support, compatible with mainstream VR devices
-- Single-player mode (multiplayer code removed)
-- Realistic physics and paddle rotation
-- Left/right hand selection
-- Paddle pose follows controller, supporting various real-life hitting gestures
-- Responsive UI for desktop and mobile
-- Customizable ball speed, table size, target area, and more
+- **Immersive VR Table Tennis**: Experience table tennis in a fully immersive 3D environment. The game leverages WebXR and advanced 3D graphics to make you feel like you are truly standing at the table.
+- **Realistic Physics**: Every bounce, spin, and collision is calculated using a physics engine, making the ball's movement and paddle response feel natural and challenging.
+- **Free Paddle Movement**: The paddle's position and orientation follow your VR controller in real time, allowing for forehand, backhand, spin, smash, and all kinds of real-life ping pong techniques.
+- **Left/Right Handed Mode**: Choose your dominant hand before entering the game for a personalized experience.
+- **Precision Target Challenge**: Hit the ball to a highlighted target area on the table to earn extra points and lives, encouraging skillful and strategic play.
+- **Progressive Difficulty**: The ball's speed increases as rallies get longer, testing your reflexes and control.
+- **Score & Life System**: Try to achieve the highest score before running out of lives. Hitting the target area can earn you extra lives!
+- **Minimalist UI**: The interface is clean and distraction-free, keeping you focused on the game.
+- **Quick Start**: No account or login required—just open the game, pick your hand, and play instantly.
+- **Device Friendly**: Works on desktop browsers and VR headsets with WebXR support.
 
 ---
 
@@ -52,6 +55,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - On the home page, select **Left Hand** or **Right Hand** to enter the game and set your dominant hand.
 - In VR mode, the paddle will follow your controller's position and rotation, supporting a variety of real-life hitting gestures.
 - Use the "Reset Pose" button to recalibrate your view if needed.
+- Aim for the target area on the table for bonus points and extra lives.
+- The game gets faster as you return more balls—how long can you survive?
 
 ---
 

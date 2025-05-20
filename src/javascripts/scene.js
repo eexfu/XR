@@ -598,7 +598,7 @@ export default class Scene {
     }
     
     // 添加XR控制器
-    const controller = this.renderer.xr.getController(0);
+    const controller = this.renderer.xr.getController(1);
     if (controller) {
       console.log('Controller found, adding to scene');
       this.scene.add(controller);
@@ -668,56 +668,46 @@ export default class Scene {
       console.log('VR session started');
       this.controlMode = CONTROLMODE.VR;
       
-      // 初始化控制器
-      const controller = this.renderer.xr.getController(0);
-      if (controller) {
-        console.log('Adding controller to scene');
-        this.scene.add(controller);
-        
-        // 添加控制器事件监听
-        controller.addEventListener('selectstart', () => {
-          console.log('Controller select event triggered');
-          if (this.config.state === STATE.GAME_OVER) {
-            this.hud.message.click();
-          }
-        });
-        
-        // 添加控制器移动事件监听
-        controller.addEventListener('move', (event) => {
-          console.log('Controller move event:', event);
-          if (this.config.state === STATE.PLAYING && this.renderer.xr.isPresenting) {
-            const controllerPosition = new Vector3();
-            controller.getWorldPosition(controllerPosition);
-            console.log('Controller position:', controllerPosition);
-            
-            if (this.paddle) {
-              this.paddle.position.set(
-                controllerPosition.x,
-                Math.max(this.config.tableHeight + 0.2, controllerPosition.y),
-                controllerPosition.z
-              );
-              console.log('Updated paddle position:', this.paddle.position);
-            }
-          }
-        });
-        
-        // 添加控制器连接事件监听
-        controller.addEventListener('connected', (event) => {
-          console.log('Controller connected:', event);
-        });
-        
-        // 添加控制器断开连接事件监听
-        controller.addEventListener('disconnected', (event) => {
-          console.log('Controller disconnected:', event);
-        });
-      } else {
-        console.warn('No controller found during session start');
-      }
+      // 获取右手控制器
+      const controller = this.renderer.xr.getController(1);
+      this.scene.add(controller);
       
-      // 确保球拍可见
-      if (this.paddle) {
-        this.paddle.visible = true;
-      }
+      // 添加控制器事件监听
+      controller.addEventListener('selectstart', () => {
+        console.log('Controller select event triggered');
+        if (this.config.state === STATE.GAME_OVER) {
+          this.hud.message.click();
+        }
+      });
+      
+      // 添加控制器移动事件监听
+      controller.addEventListener('move', (event) => {
+        console.log('Controller move event:', event);
+        if (this.config.state === STATE.PLAYING && this.renderer.xr.isPresenting) {
+          const controllerPosition = new Vector3();
+          controller.getWorldPosition(controllerPosition);
+          console.log('Controller position:', controllerPosition);
+          
+          if (this.paddle) {
+            this.paddle.position.set(
+              controllerPosition.x,
+              Math.max(this.config.tableHeight + 0.2, controllerPosition.y),
+              controllerPosition.z
+            );
+            console.log('Updated paddle position:', this.paddle.position);
+          }
+        }
+      });
+      
+      // 添加控制器连接事件监听
+      controller.addEventListener('connected', (event) => {
+        console.log('Controller connected:', event);
+      });
+      
+      // 添加控制器断开连接事件监听
+      controller.addEventListener('disconnected', (event) => {
+        console.log('Controller disconnected:', event);
+      });
     });
 
     this.renderer.xr.addEventListener('sessionend', () => {
@@ -867,7 +857,7 @@ export default class Scene {
       // setupXRControls() 应该在场景设置早期被调用，以准备好控制器对象
       // VRButton进入会话后，控制器事件才会开始触发。
       // 如果之前没有调用，这里可以确保调用一次
-      if(!this.scene.children.includes(this.renderer.xr.getController(0))) {
+      if(!this.scene.children.includes(this.renderer.xr.getController(1))) {
           this.setupXRControls(); 
           console.log('setupXRControls called from startGame');
       }
@@ -1358,25 +1348,17 @@ export default class Scene {
 
     if (this.renderer.xr.isPresenting) {
       // 获取手柄控制器
-      const controller = this.renderer.xr.getController(0);
+      const controller = this.renderer.xr.getController(1);
       if (controller) {
         // 获取手柄的世界位置
         const controllerPosition = new Vector3();
         controller.getWorldPosition(controllerPosition);
         
-        // 直接使用手柄位置，但保持球拍在合适的高度
-        paddlePositionVec.set(
-          controllerPosition.x,
-          Math.max(this.config.tableHeight + 0.2, controllerPosition.y),
-          controllerPosition.z
-        );
+        // 直接使用手柄位置，允许在3D空间中自由移动
+        paddlePositionVec.copy(controllerPosition);
         
-        // 应用边界限制
+        // 只限制水平方向的移动范围，允许在z轴和y轴上自由移动
         paddlePositionVec.x = cap(paddlePositionVec.x, this.config.tableWidth / 2, -this.config.tableWidth / 2);
-        paddlePositionVec.z = cap(paddlePositionVec.z, 
-          this.config.tablePositionZ + this.config.tableDepth / 2,
-          this.config.tablePositionZ - this.config.tableDepth / 2 + 0.1
-        );
         
         console.log('Controller Position:', controllerPosition);
         console.log('Paddle Position:', paddlePositionVec);
@@ -1588,24 +1570,16 @@ export default class Scene {
 
     // 在 VR 模式下更新球拍位置
     if (this.renderer.xr.isPresenting && this.controlMode === CONTROLMODE.VR) {
-      const controller = this.renderer.xr.getController(0);
+      const controller = this.renderer.xr.getController(1);
       if (controller && this.paddle) {
         const controllerPosition = new Vector3();
         controller.getWorldPosition(controllerPosition);
         
-        // 更新球拍位置
-        this.paddle.position.set(
-          controllerPosition.x,
-          Math.max(this.config.tableHeight + 0.2, controllerPosition.y),
-          controllerPosition.z
-        );
+        // 直接使用控制器位置，允许在3D空间中自由移动
+        this.paddle.position.copy(controllerPosition);
         
-        // 应用边界限制
+        // 只限制水平方向的移动范围
         this.paddle.position.x = cap(this.paddle.position.x, this.config.tableWidth / 2, -this.config.tableWidth / 2);
-        this.paddle.position.z = cap(this.paddle.position.z, 
-          this.config.tablePositionZ + this.config.tableDepth / 2,
-          this.config.tablePositionZ - this.config.tableDepth / 2 + 0.1
-        );
         
         console.log('Frame update - Controller position:', controllerPosition);
         console.log('Frame update - Paddle position:', this.paddle.position);

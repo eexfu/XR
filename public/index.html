@@ -1,9 +1,8 @@
-
 <!doctype html>
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Konterball</title>
+    <title>Pingpong simulate</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="stylesheets/app.css">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
@@ -31,12 +30,29 @@
 
     
   </head>
-  <body>
+  <body><script id="__bs_script__">//<![CDATA[
+  (function() {
+    try {
+      var script = document.createElement('script');
+      if ('async') {
+        script.async = true;
+      }
+      script.src = '/browser-sync/browser-sync-client.js?v=3.0.4'.replace("HOST", location.hostname);
+      if (document.body) {
+        document.body.appendChild(script);
+      } else if (document.head) {
+        document.head.appendChild(script);
+      }
+    } catch (e) {
+      console.error("Browsersync: could not append script tag", e);
+    }
+  })()
+//]]></script>
+
     
 <button class="ui mute"><img src="images/icon-unmute.svg" title="Toggle mute"></button>
 <button class="enter-vr"><img src="images/icon-cardboard.svg" title="Toggle VR"></button>
 <button class="reset-pose"><img src="images/icon-reset-pose.svg" title="Reset pose"></button>
-<a href="https://vr.chromeexperiments.com/" class="ui badge" target="_blank"><img src="images/webvr-badge.svg"></a>
 <div class="rotate-phone-screen">
   <div class="phone-container">
     <div class="phone-inner">
@@ -75,21 +91,22 @@
     </svg>
     <div class="inner">
       <header>
-        <h1>Konterball</h1>
-        <span class="loading-text-overlay">Konterball</span>
+        <h1>Pingpong simulate</h1>
+        <span class="loading-text-overlay">Pingpong simulate</span>
       </header>
       <p>
-        <span class="no-break">a 2-player virtual reality game,</span>
-        <span class="no-break">built for the web</span>
+        <span class="no-break">Proudly Presented By</span>
+        <span class="no-break">EM FX CY YB ZC</span>
       </p>
-      <button class="btn" id="start">Let’s Go</button>
+      <div class="handedness-buttons">
+        <button class="btn" id="left-hand">Left Hand</button>
+        <button class="btn" id="right-hand">Right Hand</button>
+      </div>
     </div>
     </svg>
     <svg class="ball-svg" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice" style="enable-background:new 0 0 1920 1080;" xml:space="preserve">
       <circle id="ball" class="st6" cx="-1205.4" cy="637" r="60"/>
     </svg>
-    <button class="about-button btn ui">About</button>
-    <a href="https://wild.as/" target="_blank" class="ui wild-logo"><img src="images/logo-wild.svg"></a>
   </div>
 
   <div class="choose-mode-screen">
@@ -106,8 +123,6 @@
         <button class="btn" id="join-room">Join Game</button>
       </div>
     </div>
-    <button class="about-button btn">About</button>
-    <a href="https://wild.as/" target="_blank" class="ui wild-logo"><img src="images/logo-wild.svg"></a>
   </div>
 
   <div class="open-room-screen">
@@ -133,34 +148,8 @@
     <button class="back-arrow"><img src="images/icon-arrow.svg"></button>
   </div>
 
-  <div class="choose-vr-mode-screen">
-    <div class="inner">
-      <div class="tilt">
-        <p>We're updating WebVR to WebXR. In the meantime, <span id="tilt"><span class="before"></span><span class="main">check out this experiment in 360</span></span>.
-        </p>
-      </div>
-    </div>
-  </div>
-
   <div class="about-screen">
-    <div class="about-inner">
-      <h1>Konterball</h1>
-      <p>is a 2-player virtual reality game, built for the web, using three.js, cannon.js and deepstream.io.</p>
-
-      <p>Konterball is made by
-        <a target="_blank" href="https://wild.as/">wild</a>
-        in Vienna with the help of
-        <a target="_blank" href="http://www.fifth-music.com/">Fifth Music</a>.
-        Follow us on
-        <a target="_blank" href="https://www.facebook.com/WILD-657435247617232/">facebook</a>,
-        <a target="_blank" href="https://twitter.com/madebywild">twitter</a> &amp;
-        <a target="_blank" href="https://www.instagram.com/madebywild/">instagram</a>.
-      </p>
-      <p>
-      <a class="btn" href="https://open.spotify.com/album/27Wb6Hf2DKdfW8Gso65Wte" target="_blank">
-        <img src="/images/icon-note.svg"> Listen to the EP on Spotify
-      </a>
-      </p>
+    <div class="about-inner>
     </div>
     <button class="back-arrow"><img src="images/icon-arrow.svg"></button>
   </div>

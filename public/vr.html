@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR乒乓球 - VR模式</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+        }
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        #loading-text {
+            color: #fff;
+            font-family: Arial, sans-serif;
+            font-size: 24px;
+            text-align: center;
+        }
+        #vr-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .a-enter-vr-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading-screen">
+        <div id="loading-text">
+            正在加载VR环境...<br>
+            请稍候...
+        </div>
+    </div>
+    <div id="vr-container"></div>
+
+    <script>
+        // 检查是否支持WebXR
+        if (navigator.xr) {
+            navigator.xr.isSessionSupported('immersive-vr').then(supported => {
+                if (supported) {
+                    // 如果支持VR，自动重定向到带VR参数的URL
+                    window.location.href = '/?vr=true';
+                } else {
+                    document.getElementById('loading-text').innerHTML = 
+                        '您的设备不支持VR模式<br>' +
+                        '请使用支持VR的设备访问';
+                }
+            });
+        } else {
+            document.getElementById('loading-text').innerHTML = 
+                '您的浏览器不支持WebXR<br>' +
+                '请使用支持WebXR的浏览器访问';
+        }
+    </script>
+</body>
+</html> 

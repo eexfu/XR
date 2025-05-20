@@ -107,8 +107,52 @@ class PingPong {
     ]).then(() => {
       this.introAnimation();
       if (this.scene.renderer) {
-        const vrButton = VRButton.createButton(this.scene.renderer);
-        document.body.appendChild(vrButton);
+        // 检查是否支持VR
+        if (navigator.xr) {
+          navigator.xr.isSessionSupported('immersive-vr').then(supported => {
+            if (supported) {
+              console.log('VR supported, creating VR button');
+              const vrButton = VRButton.createButton(this.scene.renderer);
+              document.body.appendChild(vrButton);
+              
+              // 添加自动进入VR的功能
+              const autoEnterVR = () => {
+                if (this.scene.renderer.xr.isPresenting) {
+                  console.log('Already in VR mode');
+                  return;
+                }
+                
+                // 创建并触发VR按钮点击事件
+                const vrButtonElement = document.querySelector('.a-enter-vr-button');
+                if (vrButtonElement) {
+                  console.log('Auto-entering VR mode');
+                  vrButtonElement.click();
+                }
+              };
+
+              // 监听VR按钮点击事件
+              vrButton.addEventListener('click', () => {
+                console.log('VR button clicked');
+                // 在VR会话开始后自动进入单人模式
+                this.scene.renderer.xr.addEventListener('sessionstart', () => {
+                  console.log('VR session started, entering single player mode');
+                  this.onStartSingleplayerClick();
+                  this.onTiltClick();
+                });
+              });
+
+              // 如果URL中包含vr参数，自动进入VR模式
+              if (window.location.search.includes('vr=true')) {
+                console.log('VR parameter detected, auto-entering VR mode');
+                setTimeout(autoEnterVR, 1000); // 延迟1秒以确保场景已完全加载
+              }
+            } else {
+              console.log('VR not supported on this device');
+            }
+          });
+        } else {
+          console.log('WebXR not supported on this device');
+        }
       } else {
         console.error('Renderer not available in app.js for VRButton.createButton');
       }
@@ -220,7 +264,19 @@ class PingPong {
     this.emitter.on(EVENT.EXIT_BUTTON_PRESSED, () => {
       if (this.scene.renderer.xr.isPresenting) {
         this.scene.renderer.xr.getSession().then(session => {
-          session.end();
+          if (session) {
+            session.end().then(() => {
+              location.reload();
+            }).catch(error => {
+              console.error('Error ending VR session:', error);
+              location.reload();
+            });
+          } else {
+            location.reload();
+          }
+        }).catch(error => {
+          console.error('Error getting VR session:', error);
+          location.reload();
         });
       } else {
         location.reload();

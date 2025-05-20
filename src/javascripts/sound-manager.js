@@ -1,7 +1,7 @@
 import {Howler, Howl} from 'howler';
 import Map from 'es6-map';
 import $ from 'zepto-modules';
-import {rand, cap} from './util/helpers';
+import {cap} from './util/helpers';
 import {MODE} from './constants';
 
 /* eslint-disable */
@@ -78,6 +78,10 @@ const spriteConfig = {
     "win": [
       34000,
       1202.6984126984103
+    ],
+    "target_hit": [
+      36000,
+      1000  // 这里的1000表示音效长度为1秒，根据你的实际音效长度调整
     ]
   }
 };
@@ -86,15 +90,51 @@ export default class SoundManager {
   constructor(config) {
     this.config = config;
     this.muted = false;
-    this.error = true;
-    this.uiSprite = new Howl({
-      src: spriteConfig.urls,
-      sprite: spriteConfig.sprite,
-      onload: () => {
-        console.log('loaded');
-        this.error = false;
-      },
-    });
+    this.error = false;
+
+    // 创建单独的音效对象
+    this.sounds = {
+      targetHit: new Howl({
+        src: ['/audio/effects/target_hit.mp3'],
+        volume: 1.0,
+        preload: true,
+        html5: true,
+        onload: () => console.log('✅ Target hit sound loaded'),
+        onloaderror: (id, error) => console.error('❌ Target hit load error:', error)
+      }),
+      // 临时使用 target_hit 音效替代其他音效
+      racket: new Howl({
+        src: ['/audio/effects/racket.mp3'],
+        volume: 0.5,  // 降低音量作为临时替代
+        preload: true,
+        html5: true
+      }),
+      table: new Howl({
+        src: ['/audio/effects/table.mp3'],
+        volume: 0.3,  // 降低音量作为临时替代
+        preload: true,
+        html5: true
+      }),
+      point: new Howl({
+        src: ['/audio/effects/target_hit.mp3'],
+        volume: 0.7,
+        preload: true,
+        html5: true
+      }),
+      win: new Howl({
+        src: ['/audio/effects/win.mp3'],
+        volume: 1.0,
+        preload: true,
+        html5: true
+      }),
+      lose: new Howl({
+        src: ['/audio/effects/lose.mp3'],
+        volume: 0.6,
+        preload: true,
+        html5: true
+      })
+    };
+
     const url = '/audio/loops/';
     this.loopSounds = new Map();
     this.loopSounds.set('bass', new Howl({
@@ -119,6 +159,7 @@ export default class SoundManager {
       `${url}waiting.mp3`,
       `${url}waiting.ogg`,
     ]}));
+
     if (localStorage.muted === 'true') {
       this.mute();
     }
@@ -154,33 +195,48 @@ export default class SoundManager {
   }
 
   playUI(id) {
-    if (this.error) return;
-    this.uiSprite.play(id);
+    if (this.muted) return;
+    
+    console.log('🎵 Attempting to play sound:', id);
+    
+    switch(id) {
+      case 'target_hit':
+        this.sounds.targetHit.play();
+        break;
+      case 'point':
+        this.sounds.point.play();
+        break;
+      case 'win':
+        this.sounds.win.play();
+        break;
+      case 'lose':
+        this.sounds.lose.play();
+        break;
+      default:
+        console.warn('Unknown sound ID:', id);
+    }
   }
 
   paddle(point = {x: 0, y: 0, z: 0}) {
-    if (this.error) return;
-    const id = `racket0${rand(1, 4)}`;
-    //this.uiSprite.pos(point.x, point.y, point.z);
-    this.uiSprite.play(id);
+    if (this.muted) return;
+    this.sounds.racket.play();
   }
 
   table(point = {x: 0, y: 0, z: 0}, velocity = {x: 0, y: -1, z: -1}) {
-    if (this.error) return;
+    if (this.muted) return;
     if (point.y > this.config.tableHeight + 0.1 && this.config.mode === MODE.MULTIPLAYER) {
-      // ball hit vertical table but its not visible
       return;
     }
-    const id = `table0${rand(1, 4)}`;
-    this.uiSprite.pos(point.x, point.y, point.z);
+    
+    let volume = 1.0;
     if (point.y > this.config.tableHeight + 0.1) {
-      // ball hit vertical table half, use z velocity as volume
-      this.uiSprite.volume(cap(velocity.z * -0.5, 0, 1));
+      volume = cap(velocity.z * -0.5, 0, 1);
     } else {
-      // ball hit horizontal table, use y velocity as volume
-      this.uiSprite.volume(cap(velocity.y * -0.5, 0, 1));
+      volume = cap(velocity.y * -0.5, 0, 1);
     }
-    this.uiSprite.play(id);
+    
+    this.sounds.table.volume(volume);
+    this.sounds.table.play();
   }
 
   toggleMute() {

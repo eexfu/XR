@@ -115,6 +115,15 @@ class PingPong {
       if (this.scene.renderer) {
         const vrButton = VRButton.createButton(this.scene.renderer);
         document.body.appendChild(vrButton);
+        
+        // 添加XR会话结束事件监听
+        this.scene.renderer.xr.addEventListener('sessionend', () => {
+          console.log('XR session ended (sessionend event)');
+          this.scene.config.state = STATE.PAUSED;
+          this.scene.showOverlay();
+          $('.game-over-screen-wrapper').show();
+          $('.enter-vr').show();
+        });
       } else {
         console.error('Renderer not available in app.js for VRButton.createButton');
       }
@@ -225,23 +234,12 @@ class PingPong {
     });
     this.emitter.on(EVENT.EXIT_BUTTON_PRESSED, () => {
       if (this.scene.renderer.xr.isPresenting) {
-        this.scene.renderer.xr.getSession().then(session => {
-          if (session) {
-            session.end().then(() => {
-              location.reload();
-            }).catch(error => {
-              console.error('Error ending VR session:', error);
-              location.reload();
-            });
-          } else {
-            location.reload();
-          }
-        }).catch(error => {
-          console.error('Error getting VR session:', error);
-          location.reload();
-        });
-      } else {
-        location.reload();
+        const session = this.scene.renderer.xr.getSession();
+        if (session) {
+          session.end().catch(error => {
+            console.error('Error ending XR session:', error);
+          });
+        }
       }
     });
     this.emitter.on(EVENT.OPPONENT_DISCONNECTED, () => {

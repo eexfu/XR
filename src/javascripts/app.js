@@ -123,6 +123,8 @@ class PingPong {
           this.scene.showOverlay();
           $('.game-over-screen-wrapper').show();
           $('.enter-vr').show();
+          // 添加页面刷新
+          window.location.reload();
         });
       } else {
         console.error('Renderer not available in app.js for VRButton.createButton');
@@ -236,9 +238,14 @@ class PingPong {
       if (this.scene.renderer.xr.isPresenting) {
         const session = this.scene.renderer.xr.getSession();
         if (session) {
-          session.end().catch(error => {
-            console.error('Error ending XR session:', error);
-          });
+          session.end()
+            .then(() => {
+              // 会话真正结束后再刷新
+              window.location.reload();
+            })
+            .catch(error => {
+              console.error('Error ending XR session:', error);
+            });
         }
       }
     });

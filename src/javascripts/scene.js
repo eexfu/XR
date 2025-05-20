@@ -1347,6 +1347,7 @@ export default class Scene {
       this.ballPath.points.push(this.ball.position.clone());
     }
     if (this.ballPath.points.length > 20) {
+      
       this.ballPath.points.shift();
     }
     this.trail.geometry.dispose();

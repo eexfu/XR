@@ -26,6 +26,10 @@ import {
   CatmullRomCurve3,
   TubeGeometry,
   Texture,
+  Matrix4,
+  Line,
+  LineBasicMaterial,
+  BufferGeometry,
 } from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 
@@ -526,6 +530,13 @@ export default class Scene {
     this.config.state = STATE.GAME_OVER;
     this.time.clearTimeout(this.resetBallTimeout);
     this.crosshair.visible = true;
+    
+    // 确保控制器射线和交互点在游戏结束时可见
+    if (this.rayLine) {
+      this.rayLine.visible = true;
+      this.interactionPoint.visible = true;
+    }
+    
     if (this.config.mode === MODE.SINGLEPLAYER) {
       this.hud.message.gameOver(this.score);
       this.sound.playUI('win');
@@ -589,58 +600,102 @@ export default class Scene {
   }
 
   setupXRControls() {
-    console.log('Setting up XR controls...');
+    // 创建控制器
+    this.controller1 = this.renderer.xr.getController(0);
+    this.controller2 = this.renderer.xr.getController(1);
     
-    // 启用XR
-    if (this.renderer && !this.renderer.xr.enabled) {
-      this.renderer.xr.enabled = true;
-      console.log('XR enabled');
-    }
+    // 创建射线
+    const geometry = new BufferGeometry().setFromPoints([
+      new Vector3(0, 0, 0),
+      new Vector3(0, 0, -1)
+    ]);
     
-    // 添加XR控制器
-    const controller = this.renderer.xr.getController(1);
-    if (controller) {
-      console.log('Controller found, adding to scene');
-      this.scene.add(controller);
-      
-      // 添加控制器事件监听
-      controller.addEventListener('selectstart', () => {
-        console.log('Controller select event triggered');
-        if (this.config.state === STATE.GAME_OVER) {
-          this.hud.message.click();
+    // 创建射线材质
+    const lineMaterial = new LineBasicMaterial({ 
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.5
+    });
+    
+    // 创建射线对象
+    this.rayLine = new Line(geometry, lineMaterial);
+    this.rayLine.scale.z = 5; // 设置射线长度
+    
+    // 创建交互点
+    const dotGeometry = new SphereGeometry(0.01, 32, 32);
+    const dotMaterial = new MeshBasicMaterial({ 
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.8
+    });
+    this.interactionPoint = new Mesh(dotGeometry, dotMaterial);
+    
+    // 将射线和交互点添加到控制器
+    this.controller1.add(this.rayLine);
+    this.controller1.add(this.interactionPoint);
+    this.controller2.add(this.rayLine.clone());
+    this.controller2.add(this.interactionPoint.clone());
+    
+    // 将控制器添加到场景
+    this.scene.add(this.controller1);
+    this.scene.add(this.controller2);
+    
+    // 添加控制器事件监听
+    this.controller1.addEventListener('selectstart', this.onControllerSelectStart.bind(this));
+    this.controller1.addEventListener('selectend', this.onControllerSelectEnd.bind(this));
+    this.controller2.addEventListener('selectstart', this.onControllerSelectStart.bind(this));
+    this.controller2.addEventListener('selectend', this.onControllerSelectEnd.bind(this));
+
+    // 添加控制器移动事件监听，用于检测按钮高亮
+    this.controller1.addEventListener('move', this.onControllerMove.bind(this));
+    this.controller2.addEventListener('move', this.onControllerMove.bind(this));
+  }
+
+  onControllerSelectStart() {
+    // 当控制器按钮被按下时
+    this.rayLine.material.opacity = 1.0;
+    this.interactionPoint.material.opacity = 1.0;
+  }
+
+  onControllerSelectEnd() {
+    // 当控制器按钮被释放时
+    this.rayLine.material.opacity = 0.5;
+    this.interactionPoint.material.opacity = 0.8;
+  }
+
+  onControllerMove(event) {
+    if (!this.hud || !this.hud.message) return;
+
+    // 创建射线
+    const controller = event.target;
+    const tempMatrix = new Matrix4();
+    tempMatrix.identity().extractRotation(controller.matrixWorld);
+
+    const raycaster = new Raycaster();
+    raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+    raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+
+    // 检测射线与按钮的交叉
+    const intersects = raycaster.intersectObjects(
+      Object.values(this.hud.message.buttons).map(button => button.hitbox),
+      false
+    );
+
+    if (intersects.length > 0) {
+      const buttonName = intersects[0].object._name;
+      if (this.hud.message.intersectedButton !== buttonName) {
+        // 如果之前有按钮被高亮，先取消高亮
+        if (this.hud.message.intersectedButton) {
+          this.hud.message.buttons[this.hud.message.intersectedButton].leave();
         }
-      });
-      
-      // 添加控制器移动事件监听
-      controller.addEventListener('move', (event) => {
-        if (this.config.state === STATE.PLAYING && this.renderer.xr.isPresenting) {
-          console.log('Controller move event:', event);
-          // 更新球拍位置
-          if (this.paddle) {
-            const controllerPosition = new Vector3();
-            controller.getWorldPosition(controllerPosition);
-            this.paddle.position.set(
-              controllerPosition.x,
-              Math.max(this.config.tableHeight + 0.2, controllerPosition.y),
-              controllerPosition.z
-            );
-          }
-        }
-      });
-      
-      // 添加控制器连接事件监听
-      controller.addEventListener('connected', (event) => {
-        console.log('Controller connected:', event);
-        // 设置控制器初始位置
-        controller.position.set(0, this.config.tableHeight + 0.2, this.config.tablePositionZ);
-      });
-      
-      // 添加控制器断开连接事件监听
-      controller.addEventListener('disconnected', (event) => {
-        console.log('Controller disconnected:', event);
-      });
-    } else {
-      console.warn('No controller found');
+        // 高亮当前按钮
+        this.hud.message.intersectedButton = buttonName;
+        this.hud.message.buttons[buttonName].enter();
+      }
+    } else if (this.hud.message.intersectedButton) {
+      // 如果射线没有指向任何按钮，取消之前的高亮
+      this.hud.message.buttons[this.hud.message.intersectedButton].leave();
+      this.hud.message.intersectedButton = null;
     }
   }
 

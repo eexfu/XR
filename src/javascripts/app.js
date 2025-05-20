@@ -221,8 +221,6 @@ class PingPong {
       if (this.scene.renderer.xr.isPresenting) {
         this.scene.renderer.xr.getSession().then(session => {
           session.end();
-        }).then(() => {
-          setTimeout(() => {location.reload();}, 3000);
         });
       } else {
         location.reload();

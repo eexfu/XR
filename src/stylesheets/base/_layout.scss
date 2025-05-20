@@ -140,21 +140,6 @@ button.btn.about-button {
   margin-top: -15px;
   color: $medium-grey;
 }
-.badge {
-  left: 13px;
-  bottom: 13px;
-  position: fixed !important;
-  width: 200px;
-  z-index: 100;
-  img {
-    opacity: 0.35;
-    width: 100%;
-  }
-  @media screen and (max-width: $breakpoint-mobile-max) {
-    left: 8px;
-    bottom: 8px;
-  }
-}
 .enter-vr {
   padding: 20px;
   border: 0;
@@ -260,24 +245,4 @@ button.btn.about-button {
 }
 .ui {
   opacity: 0;
-}
-.wild-logo {
-  position: absolute !important;
-  right: 0;
-  bottom: 0;
-  display: block;
-  width: 40px;
-  padding: 15px 20px;
-  img {
-    width: 100%;
-    height: auto;
-  }
-  @media screen and (max-width: $breakpoint-mobile-max) {
-    padding: 10px 15px;
-  }
-}
-.choose-mode-screen .wild-logo {
-  @media screen and (max-width: $breakpoint-mobile-max) {
-    display: none;
-  }
 }

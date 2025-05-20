@@ -446,7 +446,8 @@ export default class Scene {
       // 计算目标区域半径
       const effectiveWallWidth = this.config.tableWidth;
       const effectiveWallHeight = this.config.tableHeight;
-      const targetRadius = Math.sqrt((effectiveWallWidth * effectiveWallHeight) / (4 * Math.PI));
+      // 将目标半径缩小一半
+      const targetRadius = Math.sqrt((effectiveWallWidth * effectiveWallHeight) / (8 * Math.PI));
       
       // 判断是否击中目标区域
       const isWithinRadius = distanceFromTargetCenter < targetRadius;
@@ -600,28 +601,22 @@ export default class Scene {
   }
 
   setupXRControls() {
-    // 创建控制器
-    this.controller1 = this.renderer.xr.getController(0);
-    this.controller2 = this.renderer.xr.getController(1);
-    
+    // 根据handedness选择控制器
+    const handIndex = this.handedness === 'left' ? 0 : 1;
+    this.activeController = this.renderer.xr.getController(handIndex);
+
     // 创建射线
     const geometry = new BufferGeometry().setFromPoints([
       new Vector3(0, 0, 0),
       new Vector3(0, 0, -1)
     ]);
-    
-    // 创建射线材质
     const lineMaterial = new LineBasicMaterial({ 
       color: 0xffffff,
       transparent: true,
       opacity: 0.5
     });
-    
-    // 创建射线对象
     this.rayLine = new Line(geometry, lineMaterial);
-    this.rayLine.scale.z = 5; // 设置射线长度
-    
-    // 创建交互点
+    this.rayLine.scale.z = 5;
     const dotGeometry = new SphereGeometry(0.01, 32, 32);
     const dotMaterial = new MeshBasicMaterial({ 
       color: 0xffffff,
@@ -629,26 +624,12 @@ export default class Scene {
       opacity: 0.8
     });
     this.interactionPoint = new Mesh(dotGeometry, dotMaterial);
-    
-    // 将射线和交互点添加到控制器
-    this.controller1.add(this.rayLine);
-    this.controller1.add(this.interactionPoint);
-    this.controller2.add(this.rayLine.clone());
-    this.controller2.add(this.interactionPoint.clone());
-    
-    // 将控制器添加到场景
-    this.scene.add(this.controller1);
-    this.scene.add(this.controller2);
-    
-    // 添加控制器事件监听
-    this.controller1.addEventListener('selectstart', this.onControllerSelectStart.bind(this));
-    this.controller1.addEventListener('selectend', this.onControllerSelectEnd.bind(this));
-    this.controller2.addEventListener('selectstart', this.onControllerSelectStart.bind(this));
-    this.controller2.addEventListener('selectend', this.onControllerSelectEnd.bind(this));
-
-    // 添加控制器移动事件监听，用于检测按钮高亮
-    this.controller1.addEventListener('move', this.onControllerMove.bind(this));
-    this.controller2.addEventListener('move', this.onControllerMove.bind(this));
+    this.activeController.add(this.rayLine);
+    this.activeController.add(this.interactionPoint);
+    this.scene.add(this.activeController);
+    this.activeController.addEventListener('selectstart', this.onControllerSelectStart.bind(this));
+    this.activeController.addEventListener('selectend', this.onControllerSelectEnd.bind(this));
+    this.activeController.addEventListener('move', this.onControllerMove.bind(this));
   }
 
   onControllerSelectStart() {
@@ -1410,31 +1391,21 @@ export default class Scene {
 
   computePaddlePosition() {
     let paddlePositionVec = new Vector3();
-
     if (this.renderer.xr.isPresenting) {
-      // 获取手柄控制器
-      const controller = this.renderer.xr.getController(1);
+      const controller = this.activeController;
       if (controller) {
-        // 获取手柄的世界位置
         const controllerPosition = new Vector3();
         controller.getWorldPosition(controllerPosition);
-        
-        // 直接使用手柄位置，但保持球拍在合适的高度
         paddlePositionVec.set(
           controllerPosition.x,
           Math.max(this.config.tableHeight + 0.2, controllerPosition.y),
           controllerPosition.z
         );
-        
-        // 应用边界限制
         paddlePositionVec.x = cap(paddlePositionVec.x, this.config.tableWidth / 2, -this.config.tableWidth / 2);
         paddlePositionVec.z = cap(paddlePositionVec.z, 
           this.config.tablePositionZ + this.config.tableDepth / 2,
           this.config.tablePositionZ - this.config.tableDepth / 2 + 0.1
         );
-        
-        console.log('Controller Position:', controllerPosition);
-        console.log('Paddle Position:', paddlePositionVec);
       }
     } else if (this.pointerIsLocked) {
       paddlePositionVec.set(
@@ -1449,7 +1420,6 @@ export default class Scene {
         -this.config.tableDepth * 0.5 * (this.mousePosition.y + 0.5)
       );
     }
-    
     return paddlePositionVec;
   }
 
@@ -1643,27 +1613,20 @@ export default class Scene {
 
     // 在 VR 模式下更新球拍位置
     if (this.renderer.xr.isPresenting && this.controlMode === CONTROLMODE.VR) {
-      const controller = this.renderer.xr.getController(1);
+      const controller = this.activeController;
       if (controller && this.paddle) {
         const controllerPosition = new Vector3();
         controller.getWorldPosition(controllerPosition);
-        
-        // 更新球拍位置
         this.paddle.position.set(
           controllerPosition.x,
           Math.max(this.config.tableHeight + 0.2, controllerPosition.y),
           controllerPosition.z
         );
-        
-        // 应用边界限制
         this.paddle.position.x = cap(this.paddle.position.x, this.config.tableWidth / 2, -this.config.tableWidth / 2);
         this.paddle.position.z = cap(this.paddle.position.z, 
           this.config.tablePositionZ + this.config.tableDepth / 2,
           this.config.tablePositionZ - this.config.tableDepth / 2 + 0.1
         );
-        
-        console.log('Frame update - Controller position:', controllerPosition);
-        console.log('Frame update - Paddle position:', this.paddle.position);
       }
     }
 

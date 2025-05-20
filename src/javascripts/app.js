@@ -1,4 +1,4 @@
-import NoSleep from 'nosleep';
+// import NoSleep from 'nosleep';
 import {
   TweenMax, TimelineMax, 
   // Power0, Power1, Power4, SlowMo, Back,
@@ -52,6 +52,12 @@ class PingPong {
         right: '60px',
       });
     }
+
+    // 页面加载后直接进入单人游戏主界面
+    window.addEventListener('DOMContentLoaded', () => {
+      this.scene.setSingleplayer();
+      this.scene.startGame();
+    });
   }
 
   checkPhoneOrientation() {
@@ -107,52 +113,8 @@ class PingPong {
     ]).then(() => {
       this.introAnimation();
       if (this.scene.renderer) {
-        // 检查是否支持VR
-        if (navigator.xr) {
-          navigator.xr.isSessionSupported('immersive-vr').then(supported => {
-            if (supported) {
-              console.log('VR supported, creating VR button');
-              const vrButton = VRButton.createButton(this.scene.renderer);
-              document.body.appendChild(vrButton);
-              
-              // 添加自动进入VR的功能
-              const autoEnterVR = () => {
-                if (this.scene.renderer.xr.isPresenting) {
-                  console.log('Already in VR mode');
-                  return;
-                }
-                
-                // 创建并触发VR按钮点击事件
-                const vrButtonElement = document.querySelector('.a-enter-vr-button');
-                if (vrButtonElement) {
-                  console.log('Auto-entering VR mode');
-                  vrButtonElement.click();
-                }
-              };
-
-              // 监听VR按钮点击事件
-              vrButton.addEventListener('click', () => {
-                console.log('VR button clicked');
-                // 在VR会话开始后自动进入单人模式
-                this.scene.renderer.xr.addEventListener('sessionstart', () => {
-                  console.log('VR session started, entering single player mode');
-                  this.onStartSingleplayerClick();
-                  this.onTiltClick();
-                });
-              });
-
-              // 如果URL中包含vr参数，自动进入VR模式
-              if (window.location.search.includes('vr=true')) {
-                console.log('VR parameter detected, auto-entering VR mode');
-                setTimeout(autoEnterVR, 1000); // 延迟1秒以确保场景已完全加载
-              }
-            } else {
-              console.log('VR not supported on this device');
-            }
-          });
-        } else {
-          console.log('WebXR not supported on this device');
-        }
+        const vrButton = VRButton.createButton(this.scene.renderer);
+        document.body.appendChild(vrButton);
       } else {
         console.error('Renderer not available in app.js for VRButton.createButton');
       }
@@ -339,16 +301,15 @@ class PingPong {
     $('#join-room').on('click', this.onJoinRoomClick.bind(this));
     $('#play-again').on('click', this.onPlayAgainClick.bind(this));
     $('.enter-vr').on('click', this.onEnterVRClick.bind(this));
-    $('.about-button').on('click', this.onAboutButtonClick.bind(this));
-    $('#start').on('click', this.onStartClick.bind(this));
     $('#tilt').on('click', this.onTiltClick.bind(this));
     $('.reset-pose').on('click', this.scene.resetPose.bind(this.scene));
     $('button.btn').on('click', () => {this.scene.sound.playUI('button');});
     $('#reload').on('click', window.location.reload);
     $('.join-room-screen .back-arrow').on('click', () => {this.backAnimation('.choose-mode-screen');});
     $('.open-room-screen .back-arrow').on('click', () => {this.backAnimation('.choose-mode-screen');});
-    $('.about-screen .back-arrow').on('click', () => {this.backAnimation(this.activeScreen, true);});
     $('.mute').on('click', this.scene.sound.toggleMute.bind(this.scene.sound));
+    $('#left-hand').on('click', () => { this.startGameWithHand('left'); });
+    $('#right-hand').on('click', () => { this.startGameWithHand('right'); });
     $('input').on('focus', e => {
       if (XRUtil.isMobile()) {
         TweenMax.to(e.target, 0.3, {
@@ -435,71 +396,6 @@ class PingPong {
       this.communication.sendRestartGame();
     }
     this.scene.restartGame();
-  }
-
-  // eslint-disable-next-line
-  onAboutButtonClick() {
-    const tl = new TimelineMax();
-    tl.set(this.activeScreen, {zIndex: 10});
-    tl.set('.transition-color-screen.green', {zIndex: 11, left: '-100%'});
-    tl.set('.transition-color-screen.blue', {zIndex: 12, left: '-100%'});
-    tl.set('.transition-color-screen.pink', {zIndex: 13, left: '-100%'});
-    tl.set('.about-screen', {zIndex: 14});
-    tl.to(this.activeScreen, screenTransitionDuration, {
-      left: '100%',
-      ease: screenTransitionEase,
-    });
-    tl.staggerTo([
-      '.transition-color-screen.green',
-      '.transition-color-screen.blue',
-      '.transition-color-screen.pink',
-      '.about-screen',
-    ], screenTransitionDuration, {
-      left: '0%',
-      ease: screenTransitionEase,
-    }, screenTransitionInterval, `-=${screenTransitionDuration}`);
-  }
-
-  onStartClick() {
-    if (XRUtil.isMobile()) {
-      const noSleep = new NoSleep();
-      noSleep.enable();
-    }
-    this.scene.sound.playLoop('bass-pad');
-    this.scene.sound.playUI('transition');
-    const tl = new TimelineMax();
-    tl.set('.intro-screen', {zIndex: 10});
-    const width = $(window).width();
-    tl.staggerTo([
-      '.intro-screen h1',
-      '.intro-screen p',
-      '.intro-screen button',
-      '.intro-screen',
-    ], screenTransitionDuration, {
-      x: width,
-      ease: screenTransitionEase,
-    }, screenTransitionInterval);
-    tl.set('.intro-screen', {display: 'none'});
-    tl.call(() => {
-      if (this.introBallTween && typeof this.introBallTween.kill === 'function') {
-        this.introBallTween.kill();
-      }
-      this.introOver = true;
-
-      // *** NEW CODE START ***
-      // Directly trigger single-player mode start after intro animation
-      // Call the relevant parts of onStartSingleplayerClick or the function itself
-      // This replicates the actions of onStartSingleplayerClick
-      $('.choose-vr-mode-screen').removeClass('blue green');
-      $('.choose-vr-mode-screen').addClass('pink');
-      $('.choose-vr-mode-screen a .before, .choose-vr-mode-screen #tilt .before').addClass('pink');
-      this.scene.setSingleplayer();
-      this.viewVRChooserScreen(); 
-      // Optionally, adjust activeScreen if needed, though viewVRChooserScreen might handle it
-      this.activeScreen = '.choose-vr-mode-screen'; // Or whatever screen viewVRChooserScreen transitions to
-
-      // *** NEW CODE END ***
-    });
   }
 
   onTiltClick() {
@@ -768,6 +664,34 @@ class PingPong {
       }, blinkSpeed);
     }).catch(e => {
       console.warn(e);
+    });
+  }
+
+  startGameWithHand(handedness) {
+    this.scene.handedness = handedness;
+    this.scene.sound.playLoop('bass-pad');
+    this.scene.sound.playUI('transition');
+    const tl = new TimelineMax();
+    tl.set('.intro-screen', {zIndex: 10});
+    const width = $(window).width();
+    tl.staggerTo([
+      '.intro-screen h1',
+      '.intro-screen p',
+      '.intro-screen .handedness-buttons',
+      '.intro-screen',
+    ], screenTransitionDuration, {
+      x: width,
+      ease: screenTransitionEase,
+    }, screenTransitionInterval);
+    tl.set('.intro-screen', {display: 'none'});
+    tl.call(() => {
+      if (this.introBallTween && typeof this.introBallTween.kill === 'function') {
+        this.introBallTween.kill();
+      }
+      this.introOver = true;
+      this.scene.setSingleplayer();
+      this.scene.startGame();
+      this.activeScreen = null;
     });
   }
 }

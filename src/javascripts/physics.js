@@ -1,5 +1,5 @@
 import {Raycaster} from 'three';
-import {EVENT} from './constants';
+import {EVENT, MODE} from './constants';
 import {cap} from './util/helpers';
 import XRUtil from './xr-util';
 

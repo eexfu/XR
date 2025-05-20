@@ -658,8 +658,7 @@ export default class Scene {
     controller.addEventListener('selectstart', () => {
       this.rayLine.material.opacity = 1.0;
       this.interactionPoint.material.opacity = 1.0;
-  
-      if (this.config.state === STATE.GAME_OVER && this.hud?.message?.click) {
+      if (this.config.state === STATE.GAME_OVER && this.hud && this.hud.message && this.hud.message.click) {
         this.hud.message.click();
       }
     });
@@ -671,7 +670,7 @@ export default class Scene {
     });
   
     // controller move 事件
-    controller.addEventListener('move', (event) => {
+    controller.addEventListener('move', () => {
       if (this.config.state === STATE.PLAYING && this.renderer.xr.isPresenting) {
         // 🎾 球拍位置同步
         if (this.paddle) {
@@ -778,7 +777,7 @@ export default class Scene {
         });
         
         // 添加控制器移动事件监听
-        controller.addEventListener('move', (event) => {
+        controller.addEventListener('move', () => {
           console.log('Controller move event:', event);
           if (this.config.state === STATE.PLAYING && this.renderer.xr.isPresenting) {
             const controllerPosition = new Vector3();

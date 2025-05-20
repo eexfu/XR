@@ -132,15 +132,81 @@ export default class Physics {
     hitpointX = cap(hitpointX / this.config.paddleSize, -1, 1);
 
     const distFromRim = e.body.position.z - (this.config.tablePositionZ + this.config.tableDepth / 2);
-    const distFromCenter = e.target.position.x / this.config.tableWidth * 0.5;
-
-    e.body.velocity.z = -3.5 * this.speed + distFromRim * 0.8;
-    if (this.isMobile) {
-      e.body.velocity.x = (-distFromCenter * 1.2) - (hitpointX * e.body.velocity.z * 0.2);
+    if (this.config.mode === MODE.MULTIPLAYER) {
+      e.body.velocity.z = -3.5 * this.speed + distFromRim * 1.2;
+      // make aiming a little easier on mobile
+      if (this.isMobile) {
+        e.body.velocity.x = -hitpointX * e.body.velocity.z * 0.1;
+      } else {
+        e.body.velocity.x = -hitpointX * e.body.velocity.z * 0.4;
+      }
+      e.body.velocity.y = 2 * (1 / this.speed) + distFromRim * 1.2;
+      
+      // 添加基于手柄移动方向的旋转效果
+      if (e.target._paddleMoveDirection || e.target._paddleHorizontalMoveDirection) {
+        const spinFactor = 3.0; // 旋转系数
+        
+        // 垂直移动（上下旋）
+        if (e.target._paddleMoveDirection) {
+          if (e.target._paddleMoveDirection > 0) {
+            // 向上移动，添加上旋
+            e.body.angularVelocity.y = spinFactor * this.speed;
+          } else if (e.target._paddleMoveDirection < 0) {
+            // 向下移动，添加下旋
+            e.body.angularVelocity.y = -spinFactor * this.speed;
+          }
+        }
+        
+        // 水平移动（左右旋）
+        if (e.target._paddleHorizontalMoveDirection) {
+          if (e.target._paddleHorizontalMoveDirection > 0) {
+            // 向右移动，添加右旋
+            e.body.angularVelocity.z = spinFactor * this.speed;
+          } else if (e.target._paddleHorizontalMoveDirection < 0) {
+            // 向左移动，添加左旋
+            e.body.angularVelocity.z = -spinFactor * this.speed;
+          }
+        }
+      }
     } else {
-      e.body.velocity.x = (-distFromCenter * 1.2) - (hitpointX * e.body.velocity.z * 0.3);
+      const distFromCenter = e.target.position.x / this.config.tableWidth * 0.5;
+
+      e.body.velocity.z = -3.5 * this.speed + distFromRim * 0.8;
+      // make aiming a little easier on mobile
+      if (this.isMobile) {
+        e.body.velocity.x = (-distFromCenter * 1.2) - (hitpointX * e.body.velocity.z * 0.2);
+      } else {
+        e.body.velocity.x = (-distFromCenter * 1.2) - (hitpointX * e.body.velocity.z * 0.3);
+      }
+      e.body.velocity.y = 2 * (1 / this.speed) + distFromRim * 0.8;
+      
+      // 添加基于手柄移动方向的旋转效果
+      if (e.target._paddleMoveDirection || e.target._paddleHorizontalMoveDirection) {
+        const spinFactor = 3.0;
+        
+        // 垂直移动（上下旋）
+        if (e.target._paddleMoveDirection) {
+          if (e.target._paddleMoveDirection > 0) {
+            // 向上移动，添加上旋
+            e.body.angularVelocity.y = spinFactor * this.speed;
+          } else if (e.target._paddleMoveDirection < 0) {
+            // 向下移动，添加下旋
+            e.body.angularVelocity.y = -spinFactor * this.speed;
+          }
+        }
+        
+        // 水平移动（左右旋）
+        if (e.target._paddleHorizontalMoveDirection) {
+          if (e.target._paddleHorizontalMoveDirection > 0) {
+            // 向右移动，添加右旋
+            e.body.angularVelocity.z = spinFactor * this.speed;
+          } else if (e.target._paddleHorizontalMoveDirection < 0) {
+            // 向左移动，添加左旋
+            e.body.angularVelocity.z = -spinFactor * this.speed;
+          }
+        }
+      }
     }
-    e.body.velocity.y = 2 * (1 / this.speed) + distFromRim * 0.8;
   }
 
   onBallTableCollision(e) {

@@ -602,83 +602,141 @@ export default class Scene {
   }
 
   setupXRControls() {
-    // 根据handedness选择控制器
+    console.log('Setting up XR controls...');
+  
+    // 启用 XR
+    if (this.renderer && !this.renderer.xr.enabled) {
+      this.renderer.xr.enabled = true;
+      console.log('XR enabled');
+    }
+  
+    // 根据 handedness 选择控制器
     const handIndex = this.handedness === 'left' ? 0 : 1;
-    this.activeController = this.renderer.xr.getController(handIndex);
-
-    // 创建射线
+    const controller = this.renderer.xr.getController(handIndex);
+    if (!controller) {
+      console.warn('No controller found');
+      return;
+    }
+  
+    this.activeController = controller;
+    this.scene.add(controller);
+  
+    // 射线线条
     const geometry = new BufferGeometry().setFromPoints([
       new Vector3(0, 0, 0),
       new Vector3(0, 0, -1)
     ]);
-    const lineMaterial = new LineBasicMaterial({ 
+    const lineMaterial = new LineBasicMaterial({
       color: 0xffffff,
       transparent: true,
       opacity: 0.5
     });
     this.rayLine = new Line(geometry, lineMaterial);
     this.rayLine.scale.z = 5;
+  
+    // 交互点
     const dotGeometry = new SphereGeometry(0.01, 32, 32);
-    const dotMaterial = new MeshBasicMaterial({ 
+    const dotMaterial = new MeshBasicMaterial({
       color: 0xffffff,
       transparent: true,
       opacity: 0.8
     });
     this.interactionPoint = new Mesh(dotGeometry, dotMaterial);
-    this.activeController.add(this.rayLine);
-    this.activeController.add(this.interactionPoint);
-    this.scene.add(this.activeController);
-    this.activeController.addEventListener('selectstart', this.onControllerSelectStart.bind(this));
-    this.activeController.addEventListener('selectend', this.onControllerSelectEnd.bind(this));
-    this.activeController.addEventListener('move', this.onControllerMove.bind(this));
-  }
-
-  onControllerSelectStart() {
-    // 当控制器按钮被按下时
-    this.rayLine.material.opacity = 1.0;
-    this.interactionPoint.material.opacity = 1.0;
-  }
-
-  onControllerSelectEnd() {
-    // 当控制器按钮被释放时
-    this.rayLine.material.opacity = 0.5;
-    this.interactionPoint.material.opacity = 0.8;
-  }
-
-  onControllerMove(event) {
-    if (!this.hud || !this.hud.message) return;
-
-    // 创建射线
-    const controller = event.target;
-    const tempMatrix = new Matrix4();
-    tempMatrix.identity().extractRotation(controller.matrixWorld);
-
-    const raycaster = new Raycaster();
-    raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-    raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-
-    // 检测射线与按钮的交叉
-    const intersects = raycaster.intersectObjects(
-      Object.values(this.hud.message.buttons).map(button => button.hitbox),
-      false
-    );
-
-    if (intersects.length > 0) {
-      const buttonName = intersects[0].object._name;
-      if (this.hud.message.intersectedButton !== buttonName) {
-        // 如果之前有按钮被高亮，先取消高亮
-        if (this.hud.message.intersectedButton) {
-          this.hud.message.buttons[this.hud.message.intersectedButton].leave();
-        }
-        // 高亮当前按钮
-        this.hud.message.intersectedButton = buttonName;
-        this.hud.message.buttons[buttonName].enter();
+  
+    controller.add(this.rayLine);
+    controller.add(this.interactionPoint);
+  
+    // 控制器初始位置（connected 事件触发前设置默认）
+    controller.position.set(0, this.config.tableHeight + 0.2, this.config.tablePositionZ);
+  
+    // 记录上一帧的位置
+    let lastControllerPosition = new Vector3();
+    let lastVerticalMoveDirection = 0;
+    let lastHorizontalMoveDirection = 0;
+  
+    // 注册事件：selectstart
+    controller.addEventListener('selectstart', () => {
+      this.rayLine.material.opacity = 1.0;
+      this.interactionPoint.material.opacity = 1.0;
+  
+      if (this.config.state === STATE.GAME_OVER && this.hud?.message?.click) {
+        this.hud.message.click();
       }
-    } else if (this.hud.message.intersectedButton) {
-      // 如果射线没有指向任何按钮，取消之前的高亮
-      this.hud.message.buttons[this.hud.message.intersectedButton].leave();
-      this.hud.message.intersectedButton = null;
-    }
+    });
+  
+    // selectend 恢复透明度
+    controller.addEventListener('selectend', () => {
+      this.rayLine.material.opacity = 0.5;
+      this.interactionPoint.material.opacity = 0.8;
+    });
+  
+    // controller move 事件
+    controller.addEventListener('move', (event) => {
+      if (this.config.state === STATE.PLAYING && this.renderer.xr.isPresenting) {
+        // 🎾 球拍位置同步
+        if (this.paddle) {
+          const controllerPosition = new Vector3();
+          controller.getWorldPosition(controllerPosition);
+  
+          const verticalMoveDirection = controllerPosition.y - lastControllerPosition.y;
+          const horizontalMoveDirection = controllerPosition.x - lastControllerPosition.x;
+  
+          lastVerticalMoveDirection = lastVerticalMoveDirection * 0.7 + verticalMoveDirection * 0.3;
+          lastHorizontalMoveDirection = lastHorizontalMoveDirection * 0.7 + horizontalMoveDirection * 0.3;
+  
+          this.paddle._paddleMoveDirection = lastVerticalMoveDirection;
+          this.paddle._paddleHorizontalMoveDirection = lastHorizontalMoveDirection;
+  
+          this.paddle.position.set(
+            controllerPosition.x,
+            Math.max(this.config.tableHeight + 0.2, controllerPosition.y),
+            controllerPosition.z
+          );
+  
+          lastControllerPosition.copy(controllerPosition);
+        }
+      }
+  
+      // ☄️ HUD 射线检测
+      if (!this.hud || !this.hud.message) return;
+  
+      const tempMatrix = new Matrix4();
+      tempMatrix.identity().extractRotation(controller.matrixWorld);
+  
+      const raycaster = new Raycaster();
+      raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+      raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+  
+      const intersects = raycaster.intersectObjects(
+        Object.values(this.hud.message.buttons).map(button => button.hitbox),
+        false
+      );
+  
+      if (intersects.length > 0) {
+        const buttonName = intersects[0].object._name;
+        if (this.hud.message.intersectedButton !== buttonName) {
+          if (this.hud.message.intersectedButton) {
+            this.hud.message.buttons[this.hud.message.intersectedButton].leave();
+          }
+          this.hud.message.intersectedButton = buttonName;
+          this.hud.message.buttons[buttonName].enter();
+        }
+      } else if (this.hud.message.intersectedButton) {
+        this.hud.message.buttons[this.hud.message.intersectedButton].leave();
+        this.hud.message.intersectedButton = null;
+      }
+    });
+  
+    // connected: 初始化位置
+    controller.addEventListener('connected', (event) => {
+      console.log('Controller connected:', event);
+      controller.position.set(0, this.config.tableHeight + 0.2, this.config.tablePositionZ);
+      lastControllerPosition.copy(controller.position);
+    });
+  
+    controller.addEventListener('disconnected', (event) => {
+      console.log('Controller disconnected:', event);
+    });
   }
 
   setupThree() {
@@ -904,7 +962,7 @@ export default class Scene {
       // setupXRControls() 应该在场景设置早期被调用，以准备好控制器对象
       // VRButton进入会话后，控制器事件才会开始触发。
       // 如果之前没有调用，这里可以确保调用一次
-      if(!this.scene.children.includes(this.renderer.xr.getController(0))) {
+      if(!this.scene.children.includes(this.renderer.xr.getController(1))) {
           this.setupXRControls(); 
           console.log('setupXRControls called from startGame');
       }
@@ -1405,16 +1463,15 @@ export default class Scene {
       if (controller) {
         const controllerPosition = new Vector3();
         controller.getWorldPosition(controllerPosition);
-        paddlePositionVec.set(
-          controllerPosition.x,
-          Math.max(this.config.tableHeight + 0.2, controllerPosition.y),
-          controllerPosition.z
-        );
+        
+        // 直接使用手柄位置，允许在3D空间中自由移动
+        paddlePositionVec.copy(controllerPosition);
+        
+        // 只限制水平方向的移动范围，允许在z轴和y轴上自由移动
         paddlePositionVec.x = cap(paddlePositionVec.x, this.config.tableWidth / 2, -this.config.tableWidth / 2);
-        paddlePositionVec.z = cap(paddlePositionVec.z, 
-          this.config.tablePositionZ + this.config.tableDepth / 2,
-          this.config.tablePositionZ - this.config.tableDepth / 2 + 0.1
-        );
+        
+        console.log('Controller Position:', controllerPosition);
+        console.log('Paddle Position:', paddlePositionVec);
       }
     } else if (this.pointerIsLocked) {
       paddlePositionVec.set(
@@ -1626,16 +1683,15 @@ export default class Scene {
       if (controller && this.paddle) {
         const controllerPosition = new Vector3();
         controller.getWorldPosition(controllerPosition);
-        this.paddle.position.set(
-          controllerPosition.x,
-          Math.max(this.config.tableHeight + 0.2, controllerPosition.y),
-          controllerPosition.z
-        );
+        
+        // 直接使用控制器位置，允许在3D空间中自由移动
+        this.paddle.position.copy(controllerPosition);
+        
+        // 只限制水平方向的移动范围
         this.paddle.position.x = cap(this.paddle.position.x, this.config.tableWidth / 2, -this.config.tableWidth / 2);
-        this.paddle.position.z = cap(this.paddle.position.z, 
-          this.config.tablePositionZ + this.config.tableDepth / 2,
-          this.config.tablePositionZ - this.config.tableDepth / 2 + 0.1
-        );
+        
+        console.log('Frame update - Controller position:', controllerPosition);
+        console.log('Frame update - Paddle position:', this.paddle.position);
       }
     }
 

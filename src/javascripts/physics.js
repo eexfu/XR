@@ -150,6 +150,33 @@ export default class Physics {
         e.body.velocity.x = -hitpointX * e.body.velocity.z * 0.4;
       }
       e.body.velocity.y = 2 * (1 / this.speed) + distFromRim * 1.2;
+      
+      // 添加基于手柄移动方向的旋转效果
+      if (e.target._paddleMoveDirection || e.target._paddleHorizontalMoveDirection) {
+        const spinFactor = 3.0; // 旋转系数
+        
+        // 垂直移动（上下旋）
+        if (e.target._paddleMoveDirection) {
+          if (e.target._paddleMoveDirection > 0) {
+            // 向上移动，添加上旋
+            e.body.angularVelocity.y = spinFactor * this.speed;
+          } else if (e.target._paddleMoveDirection < 0) {
+            // 向下移动，添加下旋
+            e.body.angularVelocity.y = -spinFactor * this.speed;
+          }
+        }
+        
+        // 水平移动（左右旋）
+        if (e.target._paddleHorizontalMoveDirection) {
+          if (e.target._paddleHorizontalMoveDirection > 0) {
+            // 向右移动，添加右旋
+            e.body.angularVelocity.z = spinFactor * this.speed;
+          } else if (e.target._paddleHorizontalMoveDirection < 0) {
+            // 向左移动，添加左旋
+            e.body.angularVelocity.z = -spinFactor * this.speed;
+          }
+        }
+      }
     } else {
       const distFromCenter = e.target.position.x / this.config.tableWidth * 0.5;
 
@@ -161,6 +188,33 @@ export default class Physics {
         e.body.velocity.x = (-distFromCenter * 1.2) - (hitpointX * e.body.velocity.z * 0.3);
       }
       e.body.velocity.y = 2 * (1 / this.speed) + distFromRim * 0.8;
+      
+      // 添加基于手柄移动方向的旋转效果
+      if (e.target._paddleMoveDirection || e.target._paddleHorizontalMoveDirection) {
+        const spinFactor = 3.0;
+        
+        // 垂直移动（上下旋）
+        if (e.target._paddleMoveDirection) {
+          if (e.target._paddleMoveDirection > 0) {
+            // 向上移动，添加上旋
+            e.body.angularVelocity.y = spinFactor * this.speed;
+          } else if (e.target._paddleMoveDirection < 0) {
+            // 向下移动，添加下旋
+            e.body.angularVelocity.y = -spinFactor * this.speed;
+          }
+        }
+        
+        // 水平移动（左右旋）
+        if (e.target._paddleHorizontalMoveDirection) {
+          if (e.target._paddleHorizontalMoveDirection > 0) {
+            // 向右移动，添加右旋
+            e.body.angularVelocity.z = spinFactor * this.speed;
+          } else if (e.target._paddleHorizontalMoveDirection < 0) {
+            // 向左移动，添加左旋
+            e.body.angularVelocity.z = -spinFactor * this.speed;
+          }
+        }
+      }
     }
   }
 
@@ -181,9 +235,10 @@ export default class Physics {
       this.ball.velocity.x = (0.5 - Math.random()) * 0.5;
       this.ball.velocity.y = 0;
       this.ball.velocity.z = 2;
-      this.ball.angularVelocity.x = 0;
-      this.ball.angularVelocity.y = 0;
-      this.ball.angularVelocity.z = 0;
+      // 添加初始旋转
+      this.ball.angularVelocity.x = (Math.random() - 0.5) * 0.5;
+      this.ball.angularVelocity.y = 0.5;
+      this.ball.angularVelocity.z = (Math.random() - 0.5) * 0.5;
     } else {
       // in multiplayer we set the ball on the far side of the table so we have
       // to give it a little more velocity, similar to if the opponent was
@@ -196,9 +251,10 @@ export default class Physics {
       this.ball.velocity.z = 3;
       this.ball.velocity.x = (Math.random() - 0.5) * 0.5;
       this.ball.velocity.y = 2;
-      this.ball.angularVelocity.x = 0;
-      this.ball.angularVelocity.y = 0;
-      this.ball.angularVelocity.z = 0;
+      // 添加初始旋转
+      this.ball.angularVelocity.x = (Math.random() - 0.5) * 0.5;
+      this.ball.angularVelocity.y = 0.5;
+      this.ball.angularVelocity.z = (Math.random() - 0.5) * 0.5;
     }
   }
 

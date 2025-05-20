@@ -611,6 +611,11 @@ export default class Scene {
         }
       });
       
+      // 记录上一帧的手柄位置
+      let lastControllerPosition = new Vector3();
+      let lastVerticalMoveDirection = 0;
+      let lastHorizontalMoveDirection = 0;
+      
       // 添加控制器移动事件监听
       controller.addEventListener('move', (event) => {
         if (this.config.state === STATE.PLAYING && this.renderer.xr.isPresenting) {
@@ -619,11 +624,27 @@ export default class Scene {
           if (this.paddle) {
             const controllerPosition = new Vector3();
             controller.getWorldPosition(controllerPosition);
+            
+            // 计算手柄移动方向
+            const verticalMoveDirection = controllerPosition.y - lastControllerPosition.y;
+            const horizontalMoveDirection = controllerPosition.x - lastControllerPosition.x;
+            
+            // 使用平滑过渡，避免突变
+            lastVerticalMoveDirection = lastVerticalMoveDirection * 0.7 + verticalMoveDirection * 0.3;
+            lastHorizontalMoveDirection = lastHorizontalMoveDirection * 0.7 + horizontalMoveDirection * 0.3;
+            
+            // 更新球拍的移动方向属性
+            this.paddle._paddleMoveDirection = lastVerticalMoveDirection;
+            this.paddle._paddleHorizontalMoveDirection = lastHorizontalMoveDirection;
+            
             this.paddle.position.set(
               controllerPosition.x,
               Math.max(this.config.tableHeight + 0.2, controllerPosition.y),
               controllerPosition.z
             );
+            
+            // 保存当前位置用于下一帧计算
+            lastControllerPosition.copy(controllerPosition);
           }
         }
       });
@@ -633,6 +654,7 @@ export default class Scene {
         console.log('Controller connected:', event);
         // 设置控制器初始位置
         controller.position.set(0, this.config.tableHeight + 0.2, this.config.tablePositionZ);
+        lastControllerPosition.copy(controller.position);
       });
       
       // 添加控制器断开连接事件监听

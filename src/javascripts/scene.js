@@ -30,6 +30,7 @@ import {
   Line,
   LineBasicMaterial,
   BufferGeometry,
+  Quaternion,
 } from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 
@@ -1335,7 +1336,6 @@ export default class Scene {
     if (pos) {
       this.ghostPaddlePosition.copy(pos);
     }
-    
     if (this.hitTween && this.hitTween.isActive()) {
       // interpolate between ball and paddle position during hit animation
       const newPos = new Vector3().lerpVectors(
@@ -1347,9 +1347,18 @@ export default class Scene {
     } else if (pos) {
       this.paddle.position.copy(pos);
     }
-    const rotation = this.computePaddleRotation(this.paddle.position);
-    this.paddle.rotation.x = rotation.x;
-    this.paddle.rotation.z = rotation.z;
+    // VR模式下让球拍的朝向跟随手柄，并补偿旋转让拍面垂直于地面
+    if (this.renderer.xr.isPresenting && this.activeController) {
+      this.paddle.quaternion.copy(this.activeController.quaternion);
+      // 补偿：绕X轴-90度
+      const fix = new Quaternion();
+      fix.setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2);
+      this.paddle.quaternion.multiply(fix);
+    } else {
+      const rotation = this.computePaddleRotation(this.paddle.position);
+      this.paddle.rotation.x = rotation.x;
+      this.paddle.rotation.z = rotation.z;
+    }
     this.updateCamera();
   }
 

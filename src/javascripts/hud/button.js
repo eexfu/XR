@@ -95,7 +95,8 @@ export default class Button {
 
     this.buttonGroup.add(animationGroup);
 
-    geometry = new PlaneGeometry(this.buttonWidth, this.buttonHeight);
+    // 调整hitbox大小，使其比按钮稍大一点
+    geometry = new PlaneGeometry(this.buttonWidth * 1.2, this.buttonHeight * 1.2);
     material = new MeshBasicMaterial({transparent: true, opacity: 0});
     this.hitbox = new Mesh(geometry, material);
     this.hitbox.position.z = -0.001;
@@ -105,6 +106,7 @@ export default class Button {
 
     this.buttonGroup.position.x = x;
     this.buttonGroup.position.y = y;
+    this.buttonGroup.position.z = 0.3; // 将按钮稍微后移
 
     this.setupText();
     this.parent.add(this.buttonGroup);

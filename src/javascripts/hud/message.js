@@ -98,8 +98,8 @@ export default class Message {
     this.messageGroup.add(gameOverText);
 
     const buttonsYPosition = multiplayer ? -0.15 : -0.1;
-    this.buttons.exit = new Button(this.messageGroup, this.font, 'exit', 0.25, buttonsYPosition, this.emitter);
-    this.buttons.restart = new Button(this.messageGroup, this.font, 'restart', -0.25, buttonsYPosition, this.emitter);
+    this.buttons.exit = new Button(this.messageGroup, this.font, 'exit', 0.25, buttonsYPosition, this.emitter, 0.5, 0.25);
+    this.buttons.restart = new Button(this.messageGroup, this.font, 'restart', -0.25, buttonsYPosition, this.emitter, 0.5, 0.25);
 
     if (multiplayer) {
       const scoreText = createTextWithOutline(
@@ -118,6 +118,7 @@ export default class Message {
       this.messageGroup.add(scoreText);
     }
     this.messageGroup.position.y = this.config.tableHeight + 0.3;
+    this.messageGroup.position.z = this.config.tablePositionZ + 0.8;
   }
 
   showMessage() {

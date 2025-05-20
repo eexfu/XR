@@ -293,13 +293,6 @@ export default class Scene {
       }
       this.datShitCray = !this.datShitCray;
     });
-    this.emitter.on(EVENT.EXIT_BUTTON_PRESSED, () => {
-      if (this.renderer.xr.isPresenting) {
-        this.renderer.xr.getSession().then(session => {
-          session.end();
-        });
-      }
-    });
     this.emitter.on(EVENT.BALL_NET_COLLISION, () => {
       this.sound.playUI('net');
     });
@@ -598,7 +591,7 @@ export default class Scene {
     }
     
     // 添加XR控制器
-    const controller = this.renderer.xr.getController(0);
+    const controller = this.renderer.xr.getController(1);
     if (controller) {
       console.log('Controller found, adding to scene');
       this.scene.add(controller);
@@ -669,7 +662,7 @@ export default class Scene {
       this.controlMode = CONTROLMODE.VR;
       
       // 初始化控制器
-      const controller = this.renderer.xr.getController(0);
+      const controller = this.renderer.xr.getController(1);
       if (controller) {
         console.log('Adding controller to scene');
         this.scene.add(controller);
@@ -867,7 +860,7 @@ export default class Scene {
       // setupXRControls() 应该在场景设置早期被调用，以准备好控制器对象
       // VRButton进入会话后，控制器事件才会开始触发。
       // 如果之前没有调用，这里可以确保调用一次
-      if(!this.scene.children.includes(this.renderer.xr.getController(0))) {
+      if(!this.scene.children.includes(this.renderer.xr.getController(1))) {
           this.setupXRControls(); 
           console.log('setupXRControls called from startGame');
       }
@@ -1358,7 +1351,7 @@ export default class Scene {
 
     if (this.renderer.xr.isPresenting) {
       // 获取手柄控制器
-      const controller = this.renderer.xr.getController(0);
+      const controller = this.renderer.xr.getController(1);
       if (controller) {
         // 获取手柄的世界位置
         const controllerPosition = new Vector3();
@@ -1518,11 +1511,18 @@ export default class Scene {
       const zCamVec = new Vector3(0, 0, -1);
       const position = this.camera.localToWorld(zCamVec);
       this.crosshair.position.set(position.x, position.y, position.z);
-      if (position.z > 1) {
+      
+      // 在VR模式下始终显示准星
+      if (this.controlMode === CONTROLMODE.VR) {
         this.crosshair.visible = true;
       } else {
-        this.crosshair.visible = this.config.state === STATE.GAME_OVER;
+        if (position.z > 1) {
+          this.crosshair.visible = true;
+        } else {
+          this.crosshair.visible = this.config.state === STATE.GAME_OVER;
+        }
       }
+      
       mouse = {
         x: 0,
         y: 0,
@@ -1534,13 +1534,18 @@ export default class Scene {
       };
     }
     this.raycaster.setFromCamera(mouse, this.camera);
-    this.raycaster.far = 400;
+    // 增加射线检测距离到1000，确保能检测到远处的UI元素
+    this.raycaster.far = 1000;
+    
     // 添加防御性检查
     if (!this.hud || !this.hud.message) {
       console.warn('hud/message 未初始化，无法在updateHudControls中执行');
       return;
     }
-    this.hud.message.intersect(this.raycaster, this.controlMode === CONTROLMODE.MOUSE && !this.isMobile);
+    
+    // 在VR模式下，始终启用射线检测
+    const shouldIntersect = this.controlMode === CONTROLMODE.VR || (this.controlMode === CONTROLMODE.MOUSE && !this.isMobile);
+    this.hud.message.intersect(this.raycaster, shouldIntersect);
   }
 
   updateTrail() {
@@ -1588,7 +1593,7 @@ export default class Scene {
 
     // 在 VR 模式下更新球拍位置
     if (this.renderer.xr.isPresenting && this.controlMode === CONTROLMODE.VR) {
-      const controller = this.renderer.xr.getController(0);
+      const controller = this.renderer.xr.getController(1);
       if (controller && this.paddle) {
         const controllerPosition = new Vector3();
         controller.getWorldPosition(controllerPosition);

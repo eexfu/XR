@@ -97,7 +97,39 @@ export default class Message {
     gameOverText.position.y = multiplayer ? 0.25 : 0.1;
     this.messageGroup.add(gameOverText);
 
-    const buttonsYPosition = multiplayer ? -0.15 : -0.1;
+    // 添加排行榜显示
+    const leaderboardText = createTextWithOutline(
+      'LEADERBOARD', 
+      this.font, 
+      {
+        size: FONT_SIZE * 0.8,
+        fillColor: 0xffffff,
+        outlineColor: 0xffffff,
+        fillOpacity: 0.6,
+        outlineOpacity: 1.0
+      }
+    );
+    leaderboardText.position.x = 0.5;
+    leaderboardText.position.y = multiplayer ? 0.25 : 0.1;
+    this.messageGroup.add(leaderboardText);
+
+    // 添加排行榜数据
+    const leaderboardData = createTextWithOutline(
+      '1. Lemon - 79 PTS\n2. fx - 37 PTS\n3. ---', 
+      this.font, 
+      {
+        size: FONT_SIZE * 0.6,
+        fillColor: 0xffffff,
+        outlineColor: 0xffffff,
+        fillOpacity: 0.6,
+        outlineOpacity: 1.0
+      }
+    );
+    leaderboardData.position.x = 0.5;
+    leaderboardData.position.y = multiplayer ? 0.15 : 0;
+    this.messageGroup.add(leaderboardData);
+
+    const buttonsYPosition = multiplayer ? -0.15 : -0.25;
     this.buttons.exit = new Button(this.messageGroup, this.font, 'exit', 0.25, buttonsYPosition, this.emitter);
     this.buttons.restart = new Button(this.messageGroup, this.font, 'restart', -0.25, buttonsYPosition, this.emitter);
 

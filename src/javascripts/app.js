@@ -354,7 +354,7 @@ class PingPong {
       }
     });
 
-    // 修改Enter按钮点击事件
+    // 添加Enter按钮点击事件
     $('#enter-game').on('click', () => {
       if (this.username) {
         this.enterGameAnimation();
@@ -721,9 +721,6 @@ class PingPong {
   }
 
   welcomeAnimation() {
-    // 初始化Enter按钮状态
-    $('#enter-game').addClass('disabled');
-    
     // 初始化欢迎界面的位置和透明度
     TweenMax.set('.welcome-screen .inner > *', {
       y: 50,
@@ -744,6 +741,9 @@ class PingPong {
     tl.to('.ui', 0.8, {
       opacity: 1
     }, "-=0.3");
+
+    // 初始化Enter按钮状态
+    $('#enter-game').addClass('disabled');
   }
 
   enterGameAnimation() {

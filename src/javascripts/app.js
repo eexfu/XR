@@ -32,7 +32,7 @@ class PingPong {
     this.setupDOMHandlers();
     this.setupCustomEventHandlers();
     this.introBallTween = null;
-    this.activeScreen = '.intro-screen';
+    this.activeScreen = '.welcome-screen';
     this.mobileDetect = new MobileDetect(window.navigator.userAgent);
 
     if (XRUtil.isMobile() && 'orientation' in window) {
@@ -52,12 +52,6 @@ class PingPong {
         right: '60px',
       });
     }
-
-    // 页面加载后直接进入单人游戏主界面
-    window.addEventListener('DOMContentLoaded', () => {
-      this.scene.setSingleplayer();
-      this.scene.startGame();
-    });
   }
 
   checkPhoneOrientation() {
@@ -111,7 +105,7 @@ class PingPong {
       this.loadModeChooserAnimation(),
       this.loadingAnimation(),
     ]).then(() => {
-      this.introAnimation();
+      this.welcomeAnimation();
       if (this.scene.renderer) {
         const vrButton = VRButton.createButton(this.scene.renderer);
         document.body.appendChild(vrButton);
@@ -347,6 +341,8 @@ class PingPong {
         delay: duration,
       });
     });
+
+    $('#enter-game').on('click', () => { this.enterGameAnimation(); });
   }
 
   onVisibilityChange() {
@@ -697,6 +693,68 @@ class PingPong {
       this.scene.setSingleplayer();
       this.scene.startGame();
       this.activeScreen = null;
+    });
+  }
+
+  welcomeAnimation() {
+    // 初始化欢迎界面的位置和透明度
+    TweenMax.set('.welcome-screen .inner > *', {
+      y: 50,
+      opacity: 0
+    });
+    
+    // 创建动画序列
+    const tl = new TimelineMax();
+    
+    // 显示欢迎界面的元素
+    tl.staggerTo('.welcome-screen .inner > *', 0.5, {
+      y: 0,
+      opacity: 1,
+      ease: "power1.out"
+    }, 0.1);
+    
+    // 显示UI元素
+    tl.to('.ui', 0.8, {
+      opacity: 1
+    }, "-=0.3");
+  }
+
+  enterGameAnimation() {
+    this.scene.sound.playUI('transition');
+    const tl = new TimelineMax();
+    
+    // 设置初始状态
+    tl.set('.intro-screen', {
+      x: '100%',
+      display: 'block'
+    });
+    
+    // 欢迎界面元素淡出并向左移动
+    tl.to('.welcome-screen .inner > *', 0.5, {
+      x: -100,
+      opacity: 0,
+      ease: "power2.in",
+      stagger: 0.1
+    });
+    
+    // 整个欢迎界面向左移动
+    tl.to('.welcome-wrapper', 0.8, {
+      x: '-100%',
+      ease: "power2.inOut"
+    }, "-=0.3");
+    
+    // intro界面从右侧滑入
+    tl.to('.intro-screen', 0.8, {
+      x: '0%',
+      ease: "power2.out"
+    }, "-=0.5");
+    
+    // 完成过渡后启动intro动画
+    tl.call(() => {
+      this.welcomeOver = true;
+      this.introAnimation();
+      // 隐藏欢迎界面
+      TweenMax.set('.welcome-wrapper', { display: 'none' });
     });
   }
 }

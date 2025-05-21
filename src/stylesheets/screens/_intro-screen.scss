@@ -1,5 +1,6 @@
 .intro-screen {
   @extend .screen;
+  display: none;
   svg {
     position: absolute;
     width: 100%;

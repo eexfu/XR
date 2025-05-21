@@ -342,7 +342,31 @@ class PingPong {
       });
     });
 
-    $('#enter-game').on('click', () => { this.enterGameAnimation(); });
+    // 添加用户名输入处理
+    this.username = '';
+    $('#username').on('input', (e) => {
+      this.username = e.target.value.trim();
+      // 根据用户名是否为空来启用/禁用Enter按钮
+      if (this.username) {
+        $('#enter-game').removeClass('disabled');
+      } else {
+        $('#enter-game').addClass('disabled');
+      }
+    });
+
+    // 修改Enter按钮点击事件
+    $('#enter-game').on('click', () => {
+      if (this.username) {
+        this.enterGameAnimation();
+      }
+    });
+
+    // 添加回车键处理
+    $('#username').on('keypress', (e) => {
+      if (e.which === 13 && this.username) {  // 13是回车键的keyCode
+        this.enterGameAnimation();
+      }
+    });
   }
 
   onVisibilityChange() {
@@ -697,6 +721,9 @@ class PingPong {
   }
 
   welcomeAnimation() {
+    // 初始化Enter按钮状态
+    $('#enter-game').addClass('disabled');
+    
     // 初始化欢迎界面的位置和透明度
     TweenMax.set('.welcome-screen .inner > *', {
       y: 50,

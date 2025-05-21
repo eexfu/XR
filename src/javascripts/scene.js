@@ -568,6 +568,11 @@ export default class Scene {
   }
 
   onResize() {
+    // 确保必要的组件已经初始化
+    if (!this.effect || !this.camera) {
+      return;
+    }
+    
     this.effect.setSize(window.innerWidth, window.innerHeight, true);
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();

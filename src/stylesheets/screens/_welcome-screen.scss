@@ -76,20 +76,52 @@
       }
 
       .enter-button {
-        button {
-          font-family: 'antique';
-          font-size: 24px;
-          color: #fff;
-          background: transparent;
-          border: 2px solid #fff;
+        .btn {
           padding: 15px 40px;
+          font-size: 20px;
+          background: rgba(255, 255, 255, 0.2);
+          border: 2px solid rgba(255, 255, 255, 0.6);
+          color: #fff;
+          border-radius: 30px;
           cursor: pointer;
           transition: all 0.3s ease;
-          margin: 0 10px;
-
+          
           &:hover {
-            background: #fff;
-            color: #1C1A54;
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.8);
+          }
+          
+          &.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+          }
+        }
+      }
+
+      .username-input {
+        margin-bottom: 20px;
+        
+        input {
+          width: 100%;
+          max-width: 300px;
+          padding: 12px 15px;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.1);
+          color: #fff;
+          font-size: 18px;
+          text-align: center;
+          transition: all 0.3s ease;
+          
+          &::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+          }
+          
+          &:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.15);
           }
         }
       }

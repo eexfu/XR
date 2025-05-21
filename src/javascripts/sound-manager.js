@@ -93,47 +93,14 @@ export default class SoundManager {
     this.error = false;
 
     // 创建单独的音效对象
-    this.sounds = {
-      targetHit: new Howl({
-        src: ['/audio/effects/target_hit.mp3'],
-        volume: 1.0,
-        preload: true,
-        html5: true,
-        onload: () => console.log('✅ Target hit sound loaded'),
-        onloaderror: (id, error) => console.error('❌ Target hit load error:', error)
-      }),
-      // 临时使用 target_hit 音效替代其他音效
-      racket: new Howl({
-        src: ['/audio/effects/racket.mp3'],
-        volume: 0.5,  // 降低音量作为临时替代
-        preload: true,
-        html5: true
-      }),
-      table: new Howl({
-        src: ['/audio/effects/table.mp3'],
-        volume: 0.3,  // 降低音量作为临时替代
-        preload: true,
-        html5: true
-      }),
-      point: new Howl({
-        src: ['/audio/effects/target_hit.mp3'],
-        volume: 0.7,
-        preload: true,
-        html5: true
-      }),
-      win: new Howl({
-        src: ['/audio/effects/win.mp3'],
-        volume: 1.0,
-        preload: true,
-        html5: true
-      }),
-      lose: new Howl({
-        src: ['/audio/effects/lose.mp3'],
-        volume: 0.6,
-        preload: true,
-        html5: true
-      })
-    };
+    this.sprite = new Howl({
+      src: spriteConfig.urls,
+      sprite: spriteConfig.sprite,
+      preload: true,
+      html5: true,
+      onload: () => console.log('✅ Sound sprite loaded'),
+      onloaderror: (id, error) => console.error('❌ Sound sprite load error:', error)
+    });
 
     const url = '/audio/loops/';
     this.loopSounds = new Map();
@@ -199,27 +166,19 @@ export default class SoundManager {
     
     console.log('🎵 Attempting to play sound:', id);
     
-    switch(id) {
-      case 'target_hit':
-        this.sounds.targetHit.play();
-        break;
-      case 'point':
-        this.sounds.point.play();
-        break;
-      case 'win':
-        this.sounds.win.play();
-        break;
-      case 'lose':
-        this.sounds.lose.play();
-        break;
-      default:
-        console.warn('Unknown sound ID:', id);
+    // 使用sprite播放音效
+    if (spriteConfig.sprite[id]) {
+      this.sprite.play(id);
+    } else {
+      console.warn('Unknown sound ID:', id);
     }
   }
 
   paddle(point = {x: 0, y: 0, z: 0}) {
     if (this.muted) return;
-    this.sounds.racket.play();
+    // 随机选择一个球拍音效
+    const randomNum = Math.floor(Math.random() * 3) + 1;
+    this.sprite.play(`racket0${randomNum}`);
   }
 
   table(point = {x: 0, y: 0, z: 0}, velocity = {x: 0, y: -1, z: -1}) {
@@ -235,8 +194,10 @@ export default class SoundManager {
       volume = cap(velocity.y * -0.5, 0, 1);
     }
     
-    this.sounds.table.volume(volume);
-    this.sounds.table.play();
+    // 随机选择一个桌面音效
+    const randomNum = Math.floor(Math.random() * 3) + 1;
+    this.sprite.volume(volume);
+    this.sprite.play(`table0${randomNum}`);
   }
 
   toggleMute() {
